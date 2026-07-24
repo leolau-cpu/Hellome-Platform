@@ -10,6 +10,7 @@ import {
   ChevronRight,
   ChevronUp,
   ChevronsUpDown,
+  CircleUserRound,
   Clock4,
   Cloud,
   Ellipsis,
@@ -55,6 +56,7 @@ const icons = {
   ChevronRight,
   ChevronUp,
   ChevronsUpDown,
+  CircleUserRound,
   Clock4,
   Cloud,
   Ellipsis,
@@ -103,6 +105,7 @@ type IconSize = keyof typeof iconSizes;
 type IconProps = {
   name: IconName;
   size?: IconSize;
+  strokeWidth?: number;
   className?: string;
   'aria-label'?: string;
 };
@@ -116,12 +119,14 @@ type SortChevronsIconProps = {
 export function Icon({
   name,
   size = 'md',
+  strokeWidth: customStrokeWidth,
   className,
   'aria-label': ariaLabel,
 }: IconProps) {
   const LucideIcon = icons[name];
   const iconSize = iconSizes[size];
-  const strokeWidth = (iconSize.visualStrokeWidth * 24) / iconSize.size;
+  const strokeWidth =
+    customStrokeWidth ?? (iconSize.visualStrokeWidth * 24) / iconSize.size;
 
   return (
     <LucideIcon

@@ -1,9 +1,19 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, ReactNode, Ref } from 'react';
+import {
+  defaultProfileNickname,
+  getCurrentMockUser,
+  loginMockUser,
+  logoutMockUser,
+  mockUserChangedEventName,
+  updateMockUserProfile,
+  type MockUser,
+} from '../api/mockUserApi';
 import { Button } from '../components/ui/Button';
 import { Icon, SortChevronsIcon } from '../components/ui/Icon';
 import { SearchInput } from '../components/ui/SearchInput';
 import { TabBar } from '../components/ui/TabBar';
+import { LoginModal } from './LoginPage';
 
 const navGroups = [
   [
@@ -60,6 +70,17 @@ const messageModeTabs = [
   { value: 'announcements', label: '公告' },
   { value: 'activity', label: '动态' },
 ] as const;
+
+const profilePresetAvatarSrcs = [
+  '/assets/avatars/avatar-male-1.png',
+  '/assets/avatars/avatar-female-1.png',
+  '/assets/avatars/avatar-male-2.png',
+  '/assets/avatars/avatar-female-2.png',
+  '/assets/avatars/avatar-male-3.png',
+  '/assets/avatars/avatar-female-3.png',
+  '/assets/avatars/avatar-male-4.png',
+  '/assets/avatars/avatar-female-4.png',
+] as const satisfies readonly string[];
 
 const accountKeyOptions = ['全部APIKey', 'Hermes Desktop'] as const;
 const sortFilterOptions = ['最热', '最新', '查看最多', '使用最多'] as const;
@@ -857,6 +878,12 @@ type MessageItem = (typeof allMessages)[number];
 type ProjectItem = (typeof projects)[number]['items'][number];
 type PolicyTab = 'privacy' | 'agreement';
 
+const emptyMessageUnreadCounts: MessageUnreadCounts = {
+  announcements: 0,
+  activity: 0,
+};
+const emptyUnreadMessageIds = new Set<string>();
+
 function getProjectTaskKey(item: ProjectItem) {
   return `${item.project}-${item.title}-${item.time}-${item.task}-${item.image}`;
 }
@@ -911,14 +938,6 @@ function getProjectDetailPath(projectId: string) {
 
 function getMessageStateKey(messageMode: MessageMode, activeTab: string) {
   return `${messageMode}:${activeTab}`;
-}
-
-function getInitialPage(): PageMode {
-  if (typeof window === 'undefined') {
-    return 'home';
-  }
-
-  return getPageFromPath(window.location.pathname);
 }
 
 function getDefaultActiveTab(page: PageMode, currentViewMode: ViewMode) {
@@ -1118,12 +1137,14 @@ function ProfilePopover({
   onPolicyClick,
   onAboutClick,
   onSupportClick,
+  onLogoutClick,
 }: {
   popoverRef: Ref<HTMLDivElement>;
   onProfileClick: () => void;
   onPolicyClick: () => void;
   onAboutClick: () => void;
   onSupportClick: () => void;
+  onLogoutClick: () => void;
 }) {
   return (
     <div
@@ -1145,7 +1166,7 @@ function ProfilePopover({
                     ? onAboutClick
                     : item.label === '联系客服'
                       ? onSupportClick
-                      : undefined
+                      : onLogoutClick
             }
           >
             <span className="flex h-9 w-full items-center gap-2 rounded-button px-2 text-sm leading-5 text-text-primary hover:bg-bg-soft active:bg-bg-medium">
@@ -1207,11 +1228,15 @@ function SideNav({
   activePage,
   messageUnreadCount,
   profileAvatarSrc,
+  profileLabel,
+  isLoggedIn,
   onToggle,
   onPageChange,
+  onLoginClick,
   onProfileClick,
   onPolicyClick,
   onSupportClick,
+  onLogout,
   onCollapsedMouseEnter,
   onCollapsedMouseLeave,
 }: {
@@ -1219,12 +1244,16 @@ function SideNav({
   showCollapsedToggle: boolean;
   activePage: PageMode;
   messageUnreadCount: number;
-  profileAvatarSrc: string;
+  profileAvatarSrc?: string;
+  profileLabel: string;
+  isLoggedIn: boolean;
   onToggle: () => void;
   onPageChange: (value: PageMode) => void;
+  onLoginClick: () => void;
   onProfileClick: () => void;
   onPolicyClick: () => void;
   onSupportClick: () => void;
+  onLogout: () => void;
   onCollapsedMouseEnter: () => void;
   onCollapsedMouseLeave: () => void;
 }) {
@@ -1372,14 +1401,19 @@ function SideNav({
           </span>
         </button>
         <SidebarItem
-          avatarSrc={profileAvatarSrc}
-          label="哈啰蜜moleaa"
-          active={isProfilePopoverOpen}
+          icon={isLoggedIn ? undefined : 'CircleUserRound'}
+          avatarSrc={isLoggedIn ? profileAvatarSrc : undefined}
+          label={profileLabel}
+          active={isLoggedIn && isProfilePopoverOpen}
           collapsed={collapsed}
           buttonRef={profileButtonRef}
-          onClick={() => setIsProfilePopoverOpen((currentValue) => !currentValue)}
+          onClick={
+            isLoggedIn
+              ? () => setIsProfilePopoverOpen((currentValue) => !currentValue)
+              : onLoginClick
+          }
         />
-        {isProfilePopoverOpen && (
+        {isLoggedIn && isProfilePopoverOpen && (
           <ProfilePopover
             popoverRef={profilePopoverRef}
             onProfileClick={() => {
@@ -1397,6 +1431,10 @@ function SideNav({
             onSupportClick={() => {
               setIsProfilePopoverOpen(false);
               onSupportClick();
+            }}
+            onLogoutClick={() => {
+              setIsProfilePopoverOpen(false);
+              onLogout();
             }}
           />
         )}
@@ -1562,7 +1600,7 @@ function ProjectDetailNavTitle({
       </button>
       {isMenuOpen && canOpenMenu && (
         <ProjectCardMenu
-          className="right-0 top-12"
+          className="right-0 top-11"
           ariaLabel={`${projectTitle}项目操作`}
           onRename={() => {
             onMenuClose?.();
@@ -1599,7 +1637,9 @@ function TitleBar({
   showModeTabs,
   showDivider,
   sidebarCollapsed,
+  isLoggedIn,
   profileAvatarSrc,
+  onLoginClick,
   projectDetailTitle,
   onProjectDetailBack,
   projectDetailMenuOpen = false,
@@ -1625,13 +1665,15 @@ function TitleBar({
     messageMode: MessageMode,
     messageId: string,
   ) => void;
-  onNotificationMarkAllRead: () => void;
+  onNotificationMarkAllRead: (messageMode: MessageMode) => void;
   onNotificationAllMessagesClick: () => void;
   unreadMessageIds: Set<string>;
   showModeTabs: boolean;
   showDivider: boolean;
   sidebarCollapsed: boolean;
+  isLoggedIn: boolean;
   profileAvatarSrc: string;
+  onLoginClick: () => void;
   projectDetailTitle?: string | null;
   onProjectDetailBack?: () => void;
   projectDetailMenuOpen?: boolean;
@@ -1689,8 +1731,13 @@ function TitleBar({
           )}
         </div>
       </div>
-      <div className="flex h-14 w-[178px] items-center">
-      <div className="flex h-14 w-[130px] items-center gap-3 px-1">
+      <div
+        className={[
+          'flex h-14 items-center',
+          isLoggedIn ? 'w-[178px]' : '',
+        ].join(' ')}
+      >
+        <div className="flex h-14 w-[130px] items-center gap-3 px-1">
           <button
             className={[
               'relative flex h-8 w-8 items-center justify-center rounded-pill shadow-border-strong',
@@ -1712,9 +1759,9 @@ function TitleBar({
           {notificationOpen && (
             <NotificationPopover
               messageMode={notificationMode}
-              unreadCount={messageUnreadCount}
               unreadCounts={messageUnreadCounts}
               unreadMessageIds={unreadMessageIds}
+              isLoggedIn={isLoggedIn}
               onMessageModeChange={onNotificationModeChange}
               onMessageClick={onNotificationMessageClick}
               onMarkAllRead={onNotificationMarkAllRead}
@@ -1731,14 +1778,29 @@ function TitleBar({
             <span className="whitespace-nowrap">充值</span>
           </button>
         </div>
-        <div className="flex h-14 w-12 items-center justify-center px-2">
-          <div className="h-8 w-8 overflow-hidden rounded-pill shadow-avatar-border">
-            <img
-              className="h-full w-full rounded-pill object-cover"
-              src={profileAvatarSrc}
-              alt=""
-            />
-          </div>
+        <div
+          className={[
+            'flex h-14 items-center justify-center px-2',
+            isLoggedIn ? 'w-12' : '',
+          ].join(' ')}
+        >
+          {isLoggedIn ? (
+            <div className="h-8 w-8 overflow-hidden rounded-pill shadow-avatar-border">
+              <img
+                className="h-full w-full rounded-pill object-cover"
+                src={profileAvatarSrc}
+                alt=""
+              />
+            </div>
+          ) : (
+            <button
+              className="flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-pill bg-button-primary px-4 text-sm leading-5 text-text-inverse transition hover:bg-button-primary-hover active:bg-button-primary-active"
+              type="button"
+              onClick={onLoginClick}
+            >
+              登录/注册
+            </button>
+          )}
         </div>
       </div>
     </header>
@@ -1747,9 +1809,9 @@ function TitleBar({
 
 function NotificationPopover({
   messageMode,
-  unreadCount,
   unreadCounts,
   unreadMessageIds,
+  isLoggedIn,
   onMessageModeChange,
   onMessageClick,
   onMarkAllRead,
@@ -1757,17 +1819,18 @@ function NotificationPopover({
   onClose,
 }: {
   messageMode: MessageMode;
-  unreadCount: number;
   unreadCounts: MessageUnreadCounts;
   unreadMessageIds: Set<string>;
+  isLoggedIn: boolean;
   onMessageModeChange: (value: MessageMode) => void;
   onMessageClick: (messageMode: MessageMode, messageId: string) => void;
-  onMarkAllRead: () => void;
+  onMarkAllRead: (messageMode: MessageMode) => void;
   onAllMessagesClick: () => void;
   onClose: () => void;
 }) {
   const popoverRef = useRef<HTMLDivElement | null>(null);
-  const popoverMessages = messagesByMode[messageMode];
+  const popoverMessages = isLoggedIn ? messagesByMode[messageMode] : [];
+  const currentUnreadCount = isLoggedIn ? unreadCounts[messageMode] : 0;
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent) {
@@ -1839,7 +1902,11 @@ function NotificationPopover({
         <div className="h-px w-full bg-border-subtle" />
       </div>
       <div className="flex flex-col">
-        {popoverMessages.map((message) => {
+        {popoverMessages.length === 0 ? (
+          <div className="flex h-[110px] items-center justify-center px-4 text-sm leading-5 text-text-hint">
+            暂无消息
+          </div>
+        ) : popoverMessages.map((message) => {
           const isUnread = unreadMessageIds.has(message.id);
 
           return (
@@ -1884,8 +1951,8 @@ function NotificationPopover({
           <button
             className="h-5 rounded-button text-sm leading-5 text-text-secondary hover:text-text-primary active:text-text-primary disabled:pointer-events-none disabled:text-text-disabled"
             type="button"
-            disabled={unreadCount === 0}
-            onClick={onMarkAllRead}
+            disabled={currentUnreadCount === 0}
+            onClick={() => onMarkAllRead(messageMode)}
           >
             全部已读
           </button>
@@ -2160,17 +2227,27 @@ function InvoiceModal({
 
 function ProfileModal({
   avatarSrc,
+  nickname,
+  presetAvatarSrcs,
   onAvatarChange,
+  onAvatarPresetSelect,
+  onNicknameChange,
   onClose,
 }: {
   avatarSrc: string;
+  nickname: string;
+  presetAvatarSrcs: readonly string[];
   onAvatarChange: (file: File) => void;
+  onAvatarPresetSelect: (src: string) => void;
+  onNicknameChange: (nickname: string) => void;
   onClose: () => void;
 }) {
   const [isVisible, setIsVisible] = useState(false);
-  const [nickname, setNickname] = useState('哈啰蜜moleaa');
+  const [draftNickname, setDraftNickname] = useState(nickname);
+  const [nicknameHasError, setNicknameHasError] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const closeTimerRef = useRef<number | null>(null);
+  const canSaveProfile = draftNickname.trim().length > 0;
 
   const handleAvatarFileChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -2187,6 +2264,10 @@ function ProfileModal({
   );
 
   const closeWithAnimation = useCallback(() => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     setIsVisible(false);
 
     if (closeTimerRef.current !== null) {
@@ -2197,6 +2278,20 @@ function ProfileModal({
       onClose();
     }, 180);
   }, [onClose]);
+
+  const requestClose = useCallback(() => {
+    closeWithAnimation();
+  }, [closeWithAnimation]);
+
+  const saveAndClose = useCallback(() => {
+    if (!canSaveProfile) {
+      setNicknameHasError(true);
+      return;
+    }
+
+    onNicknameChange(draftNickname.trim());
+    closeWithAnimation();
+  }, [canSaveProfile, closeWithAnimation, draftNickname, onNicknameChange]);
 
   useEffect(() => {
     const animationFrame = window.requestAnimationFrame(() => {
@@ -2211,7 +2306,7 @@ function ProfileModal({
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        closeWithAnimation();
+        requestClose();
       }
     }
 
@@ -2224,20 +2319,20 @@ function ProfileModal({
         window.clearTimeout(closeTimerRef.current);
       }
     };
-  }, [closeWithAnimation]);
+  }, [requestClose]);
 
   return (
     <div
       className={[
         'fixed inset-0 z-50 flex items-center justify-center bg-bg-black/20 transition-opacity duration-200 ease-out',
-        isVisible ? 'opacity-100' : 'opacity-0',
+        isVisible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
       ].join(' ')}
       role="presentation"
-      onClick={closeWithAnimation}
+      onClick={requestClose}
     >
       <div
         className={[
-          'flex w-[448px] flex-col items-center overflow-hidden rounded-modal bg-bg-white shadow-popover transition-all duration-200 ease-out',
+          'flex w-[480px] flex-col items-center overflow-hidden rounded-modal bg-bg-white shadow-card-hover transition-all duration-200 ease-out',
           isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
         ].join(' ')}
         role="dialog"
@@ -2258,7 +2353,7 @@ function ProfileModal({
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-button hover:bg-bg-soft active:bg-bg-medium"
             type="button"
             aria-label="关闭个人资料弹窗"
-            onClick={closeWithAnimation}
+            onClick={requestClose}
           >
             <Icon name="X" />
           </button>
@@ -2281,7 +2376,7 @@ function ProfileModal({
               </div>
               <span className="absolute inset-0 rounded-pill bg-bg-black/0 transition-colors group-hover:bg-bg-black/40 group-active:bg-bg-black/60" />
               <span className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-pill bg-bg-white shadow-border-strong hover:bg-bg-soft active:bg-bg-medium">
-                <Icon name="ImagePlus" size="xs" />
+                <Icon name="ImagePlus" size="2xs" strokeWidth={1} />
               </span>
             </button>
             <input
@@ -2296,6 +2391,37 @@ function ProfileModal({
             </p>
           </div>
 
+          <div
+            className="flex w-full items-center justify-center gap-1 py-2"
+            aria-label="默认头像"
+          >
+            {presetAvatarSrcs.map((presetAvatarSrc) => {
+              const isSelected = avatarSrc === presetAvatarSrc;
+
+              return (
+                <button
+                  key={presetAvatarSrc}
+                  className={[
+                    'flex shrink-0 items-center justify-center rounded-pill p-1 transition-shadow',
+                    isSelected
+                      ? 'shadow-[inset_0_0_0_1px_#000]'
+                      : 'hover:shadow-[inset_0_0_0_1px_#E5E5E5] active:shadow-[inset_0_0_0_1px_#000]',
+                  ].join(' ')}
+                  type="button"
+                  aria-label="选择默认头像"
+                  aria-pressed={isSelected}
+                  onClick={() => onAvatarPresetSelect(presetAvatarSrc)}
+                >
+                  <img
+                    className="h-8 w-8 rounded-pill object-cover"
+                    src={presetAvatarSrc}
+                    alt=""
+                  />
+                </button>
+              );
+            })}
+          </div>
+
           <div className="flex w-full flex-col items-center gap-2">
             <label
               className="w-full text-sm leading-5 text-text-primary"
@@ -2303,28 +2429,50 @@ function ProfileModal({
             >
               用户昵称
             </label>
-            <div className="flex w-full items-center gap-2 rounded-button px-4 py-2.5 text-sm leading-5 shadow-border-strong">
+            <div
+              className={[
+                'flex w-full items-center gap-2 rounded-button px-4 py-2.5 text-sm leading-5 transition-shadow',
+                nicknameHasError
+                  ? 'shadow-[inset_0_0_0_1px_#FF5C4D]'
+                  : 'shadow-border-strong focus-within:shadow-border-selected',
+              ].join(' ')}
+            >
               <input
                 id="profile-nickname"
-                className="min-w-0 flex-1 bg-transparent text-text-primary outline-none"
-                value={nickname}
+                className="min-w-0 flex-1 bg-transparent text-text-primary outline-none placeholder:text-text-placeholder"
+                value={draftNickname}
+                placeholder="起个好听的昵称吧！"
                 maxLength={15}
-                onChange={(event) => setNickname(event.target.value)}
+                onChange={(event) => {
+                  const nextNickname = event.target.value;
+
+                  setDraftNickname(nextNickname);
+                  if (nicknameHasError && nextNickname.trim().length > 0) {
+                    setNicknameHasError(false);
+                  }
+                }}
               />
-              <span className="shrink-0 text-text-hint">{nickname.length}/15</span>
+              <span className="shrink-0 text-text-hint">{draftNickname.length}/15</span>
             </div>
-            <p className="w-full text-xs leading-4 text-text-hint">
-              长度1-15个字符，支持中文、英文、数字、“_”
+            <p
+              className={[
+                'w-full text-xs leading-4',
+                nicknameHasError ? 'text-accent-error' : 'text-text-hint',
+              ].join(' ')}
+            >
+              {nicknameHasError
+                ? '昵称不可为空！'
+                : '长度1-15个字符，支持中文、英文、数字、“_”'}
             </p>
           </div>
         </div>
 
         <div className="flex w-full flex-col items-end px-6 pb-6 pt-4">
           <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" size="lg" onClick={closeWithAnimation}>
+            <Button variant="secondary" size="lg" onClick={requestClose}>
               取消
             </Button>
-            <Button size="lg" onClick={closeWithAnimation}>
+            <Button size="lg" onClick={saveAndClose}>
               确定
             </Button>
           </div>
@@ -2334,9 +2482,16 @@ function ProfileModal({
   );
 }
 
-function PolicyModal({ onClose }: { onClose: () => void }) {
+function PolicyModal({
+  initialTab = 'privacy',
+  onClose,
+}: {
+  initialTab?: PolicyTab;
+  onClose: () => void;
+}) {
   const [isVisible, setIsVisible] = useState(false);
-  const [activePolicyTab, setActivePolicyTab] = useState<PolicyTab>('privacy');
+  const [activePolicyTab, setActivePolicyTab] =
+    useState<PolicyTab>(initialTab);
   const [policyTexts, setPolicyTexts] = useState<Record<PolicyTab, string>>({
     privacy: '',
     agreement: '',
@@ -2344,8 +2499,12 @@ function PolicyModal({ onClose }: { onClose: () => void }) {
   const closeTimerRef = useRef<number | null>(null);
   const policyTabs: ReadonlyArray<{ value: PolicyTab; label: string }> = [
     { value: 'privacy', label: '隐私政策' },
-    { value: 'agreement', label: '用户协议' },
+    { value: 'agreement', label: '服务条款' },
   ];
+
+  useEffect(() => {
+    setActivePolicyTab(initialTab);
+  }, [initialTab]);
 
   const closeWithAnimation = useCallback(() => {
     setIsVisible(false);
@@ -2431,7 +2590,7 @@ function PolicyModal({ onClose }: { onClose: () => void }) {
   return (
     <div
       className={[
-        'fixed inset-0 z-50 flex items-center justify-center bg-bg-black/20 transition-opacity duration-200 ease-out',
+        'fixed inset-0 z-50 flex items-center justify-center bg-bg-black/40 transition-opacity duration-200 ease-out',
         isVisible ? 'opacity-100' : 'opacity-0',
       ].join(' ')}
       role="presentation"
@@ -2439,7 +2598,7 @@ function PolicyModal({ onClose }: { onClose: () => void }) {
     >
       <div
         className={[
-          'flex h-[640px] w-[800px] flex-col items-center overflow-hidden rounded-modal bg-bg-white shadow-[0_8px_12px_rgb(0_0_0_/_0.05),0_0_12px_rgb(0_0_0_/_0.05)] transition-all duration-200 ease-out',
+          'flex h-[640px] w-[720px] flex-col items-center overflow-hidden rounded-modal bg-bg-white shadow-[0_8px_12px_rgb(0_0_0_/_0.05),0_0_12px_rgb(0_0_0_/_0.05)] transition-all duration-200 ease-out',
           isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
         ].join(' ')}
         role="dialog"
@@ -2554,7 +2713,7 @@ function MarkAllReadModal({
     >
       <div
         className={[
-          'flex h-[184px] w-[448px] flex-col overflow-hidden rounded-modal bg-bg-white shadow-card-hover transition-all duration-200 ease-out',
+          'flex h-[184px] w-[480px] flex-col overflow-hidden rounded-modal bg-bg-white shadow-card-hover transition-all duration-200 ease-out',
           isVisible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-2 scale-95 opacity-0',
         ].join(' ')}
         role="dialog"
@@ -2604,6 +2763,126 @@ function MarkAllReadModal({
               }}
             >
               全部已读
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LogoutConfirmModal({
+  onClose,
+  onConfirm,
+}: {
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const [isVisible, setIsVisible] = useState(false);
+  const closeTimerRef = useRef<number | null>(null);
+
+  const closeWithAnimation = useCallback(() => {
+    setIsVisible(false);
+
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+    }
+
+    closeTimerRef.current = window.setTimeout(() => {
+      onClose();
+    }, 180);
+  }, [onClose]);
+
+  useEffect(() => {
+    const animationFrame = window.requestAnimationFrame(() => {
+      setIsVisible(true);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, []);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        closeWithAnimation();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+      }
+    };
+  }, [closeWithAnimation]);
+
+  return (
+    <div
+      className={[
+        'fixed inset-0 z-50 flex items-center justify-center bg-bg-black/60 transition-opacity duration-200 ease-out',
+        isVisible ? 'opacity-100' : 'opacity-0',
+      ].join(' ')}
+      role="presentation"
+      onClick={closeWithAnimation}
+    >
+      <div
+        className={[
+          'flex h-[184px] w-[480px] flex-col overflow-hidden rounded-modal bg-bg-white shadow-card-hover transition-all duration-200 ease-out',
+          isVisible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-2 scale-95 opacity-0',
+        ].join(' ')}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="logout-confirm-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex h-14 items-start gap-2 pl-6 pr-4 pb-2 pt-4">
+          <div className="flex h-8 min-w-0 flex-1 items-center">
+            <h2
+              id="logout-confirm-title"
+              className="min-w-0 flex-1 truncate text-base font-medium leading-6 text-text-primary"
+            >
+              退出登录？
+            </h2>
+          </div>
+          <button
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-button hover:bg-bg-soft active:bg-bg-medium"
+            type="button"
+            aria-label="关闭退出登录提示"
+            onClick={closeWithAnimation}
+          >
+            <Icon name="X" />
+          </button>
+        </div>
+        <div className="flex h-[52px] items-center px-6 py-4">
+          <p className="truncate text-sm leading-5 text-text-primary">
+            退出后无法继续使用 Hellome
+          </p>
+        </div>
+        <div className="flex h-[76px] items-start justify-end px-6 pb-6 pt-4">
+          <div className="flex h-9 items-center gap-2">
+            <Button
+              className="h-9 w-16 px-[18px]"
+              variant="secondary"
+              size="lg"
+              onClick={closeWithAnimation}
+            >
+              取消
+            </Button>
+            <Button
+              className="h-9 w-[92px] px-[18px]"
+              variant="warning"
+              size="lg"
+              onClick={() => {
+                onConfirm();
+                closeWithAnimation();
+              }}
+            >
+              退出登录
             </Button>
           </div>
         </div>
@@ -4612,7 +4891,7 @@ function ProjectNameModal({
     >
       <form
         className={[
-          'flex w-[448px] flex-col overflow-hidden rounded-modal bg-bg-white shadow-popover transition-all duration-200 ease-out',
+          'flex w-[480px] flex-col overflow-hidden rounded-modal bg-bg-white shadow-popover transition-all duration-200 ease-out',
           isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
         ].join(' ')}
         role="dialog"
@@ -4735,7 +5014,7 @@ function ProjectDeleteModal({
     >
       <div
         className={[
-          'flex w-[448px] flex-col overflow-hidden rounded-modal bg-bg-white shadow-popover transition-all duration-200 ease-out',
+          'flex w-[480px] flex-col overflow-hidden rounded-modal bg-bg-white shadow-popover transition-all duration-200 ease-out',
           isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
         ].join(' ')}
         role="dialog"
@@ -5293,8 +5572,14 @@ export function HomePage() {
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
   const [isMarkAllReadModalOpen, setIsMarkAllReadModalOpen] = useState(false);
+  const [markAllReadTargetMode, setMarkAllReadTargetMode] =
+    useState<MessageMode>('announcements');
+  const [isLogoutConfirmModalOpen, setIsLogoutConfirmModalOpen] =
+    useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
+  const [initialPolicyTab, setInitialPolicyTab] =
+    useState<PolicyTab>('privacy');
   const [projectItems, setProjectItems] = useState<Project[]>(() => projects);
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] =
     useState(false);
@@ -5312,10 +5597,18 @@ export function HomePage() {
   const [deletingProjectTaskKey, setDeletingProjectTaskKey] = useState<
     string | null
   >(null);
-  const [profileAvatarSrc, setProfileAvatarSrc] = useState('/assets/home/Avatar.png');
+  const [currentUser, setCurrentUser] = useState<MockUser | null>(() =>
+    getCurrentMockUser(),
+  );
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [profileAvatarSrc, setProfileAvatarSrc] = useState(
+    () => getCurrentMockUser()?.avatarSrc ?? '/assets/home/Avatar.png',
+  );
+  const [profileNickname, setProfileNickname] = useState(
+    () => getCurrentMockUser()?.nickname ?? defaultProfileNickname,
+  );
   const [isNotificationPopoverOpen, setIsNotificationPopoverOpen] =
     useState(false);
-  const profileAvatarObjectUrlRef = useRef<string | null>(null);
   const [expandedMessageIdsByTab, setExpandedMessageIdsByTab] = useState<
     Record<string, Set<string>>
   >(
@@ -5330,20 +5623,51 @@ export function HomePage() {
   );
 
   const handleProfileAvatarChange = useCallback((file: File) => {
-    if (profileAvatarObjectUrlRef.current !== null) {
-      URL.revokeObjectURL(profileAvatarObjectUrlRef.current);
-    }
+    const reader = new FileReader();
 
-    const nextAvatarSrc = URL.createObjectURL(file);
-    profileAvatarObjectUrlRef.current = nextAvatarSrc;
-    setProfileAvatarSrc(nextAvatarSrc);
+    reader.addEventListener('load', () => {
+      if (typeof reader.result !== 'string') {
+        return;
+      }
+
+      setProfileAvatarSrc(reader.result);
+      updateMockUserProfile({ avatarSrc: reader.result });
+    });
+
+    reader.readAsDataURL(file);
+  }, []);
+
+  const handleProfileAvatarPresetSelect = useCallback((avatarSrc: string) => {
+    setProfileAvatarSrc(avatarSrc);
+    updateMockUserProfile({ avatarSrc });
+  }, []);
+
+  const handleProfileNicknameChange = useCallback((nickname: string) => {
+    setProfileNickname(nickname);
+    updateMockUserProfile({ nickname });
+  }, []);
+
+  const handleCloseProfileModal = useCallback(() => {
+    setIsProfileModalOpen(false);
   }, []);
 
   useEffect(() => {
-    return () => {
-      if (profileAvatarObjectUrlRef.current !== null) {
-        URL.revokeObjectURL(profileAvatarObjectUrlRef.current);
+    function syncCurrentUser() {
+      const nextCurrentUser = getCurrentMockUser();
+
+      setCurrentUser(nextCurrentUser);
+      if (nextCurrentUser !== null) {
+        setProfileAvatarSrc(nextCurrentUser.avatarSrc);
+        setProfileNickname(nextCurrentUser.nickname);
       }
+    }
+
+    window.addEventListener(mockUserChangedEventName, syncCurrentUser);
+    window.addEventListener('storage', syncCurrentUser);
+
+    return () => {
+      window.removeEventListener(mockUserChangedEventName, syncCurrentUser);
+      window.removeEventListener('storage', syncCurrentUser);
     };
   }, []);
   useEffect(() => {
@@ -5381,11 +5705,21 @@ export function HomePage() {
   );
   const messageUnreadCount =
     messageUnreadCounts.announcements + messageUnreadCounts.activity;
+  const isLoggedIn = currentUser !== null;
+  const visibleMessageUnreadCounts = isLoggedIn
+    ? messageUnreadCounts
+    : emptyMessageUnreadCounts;
+  const visibleMessageUnreadCount = isLoggedIn ? messageUnreadCount : 0;
+  const visibleUnreadMessageIds = isLoggedIn ? unreadMessageIds : emptyUnreadMessageIds;
   const currentMessages = messagesByMode[messageMode];
   const currentMessageStateKey = getMessageStateKey(messageMode, activeTab);
   const currentExpandedMessageIds =
     expandedMessageIdsByTab[currentMessageStateKey] ?? new Set<string>();
-  const canMarkAllRead = activePage === 'messages' && activeTab !== '已读' && messageUnreadCount > 0;
+  const canMarkAllRead =
+    activePage === 'messages' &&
+    activeTab !== '已读' &&
+    isLoggedIn &&
+    messageUnreadCounts[messageMode] > 0;
   const renamingProject =
     projectItems.find((project) => project.id === renamingProjectId) ?? null;
   const deletingProject =
@@ -5416,7 +5750,9 @@ export function HomePage() {
     isInvoiceModalOpen ||
     isSupportModalOpen ||
     isRechargeModalOpen ||
+    isLoginModalOpen ||
     isMarkAllReadModalOpen ||
+    isLogoutConfirmModalOpen ||
     isProfileModalOpen ||
     isPolicyModalOpen ||
     isCreateProjectModalOpen ||
@@ -6015,14 +6351,41 @@ export function HomePage() {
     });
   }
 
-  function handleNotificationMarkAllRead() {
-    setIsNotificationPopoverOpen(false);
+  function handleOpenMarkAllReadModal(targetMessageMode: MessageMode) {
+    setMarkAllReadTargetMode(targetMessageMode);
     setIsMarkAllReadModalOpen(true);
+  }
+
+  function handleOpenPolicyModal(tab: PolicyTab = 'privacy') {
+    setInitialPolicyTab(tab);
+    setIsPolicyModalOpen(true);
+  }
+
+  function handleRechargeClick() {
+    if (!isLoggedIn) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+
+    setIsRechargeModalOpen(true);
+  }
+
+  function handleNotificationMarkAllRead(targetMessageMode: MessageMode) {
+    setIsNotificationPopoverOpen(false);
+    handleOpenMarkAllReadModal(targetMessageMode);
   }
 
   function handleNotificationAllMessagesClick() {
     setIsNotificationPopoverOpen(false);
     handlePageChange('messages');
+  }
+
+  function handleOpenProfileModal() {
+    setIsProfileModalOpen(false);
+
+    window.requestAnimationFrame(() => {
+      setIsProfileModalOpen(true);
+    });
   }
 
   function handleMessageToggle(messageId: string) {
@@ -6071,16 +6434,20 @@ export function HomePage() {
         collapsed={isSidebarCollapsed}
         showCollapsedToggle={showCollapsedToggle}
         activePage={activePage}
-        messageUnreadCount={messageUnreadCount}
+        messageUnreadCount={visibleMessageUnreadCount}
         profileAvatarSrc={profileAvatarSrc}
+        profileLabel={isLoggedIn ? profileNickname : '点击登录'}
+        isLoggedIn={isLoggedIn}
         onToggle={() => {
           setShowCollapsedToggle(false);
           setIsSidebarCollapsed((value) => !value);
         }}
         onPageChange={handlePageChange}
-        onProfileClick={() => setIsProfileModalOpen(true)}
-        onPolicyClick={() => setIsPolicyModalOpen(true)}
+        onLoginClick={() => setIsLoginModalOpen(true)}
+        onProfileClick={handleOpenProfileModal}
+        onPolicyClick={() => handleOpenPolicyModal('privacy')}
         onSupportClick={() => setIsSupportModalOpen(true)}
+        onLogout={() => setIsLogoutConfirmModalOpen(true)}
         onCollapsedMouseEnter={() => setShowCollapsedToggle(true)}
         onCollapsedMouseLeave={() => setShowCollapsedToggle(false)}
       />
@@ -6096,10 +6463,10 @@ export function HomePage() {
           onViewModeChange={handleViewModeChange}
           messageMode={messageMode}
           notificationMode={notificationMode}
-          messageUnreadCount={messageUnreadCount}
-          messageUnreadCounts={messageUnreadCounts}
+          messageUnreadCount={visibleMessageUnreadCount}
+          messageUnreadCounts={visibleMessageUnreadCounts}
           onMessageModeChange={handleMessageModeChange}
-          onRechargeClick={() => setIsRechargeModalOpen(true)}
+          onRechargeClick={handleRechargeClick}
           notificationOpen={isNotificationPopoverOpen}
           onNotificationToggle={() =>
             setIsNotificationPopoverOpen((currentValue) => !currentValue)
@@ -6109,11 +6476,13 @@ export function HomePage() {
           onNotificationMessageClick={handleNotificationMessageClick}
           onNotificationMarkAllRead={handleNotificationMarkAllRead}
           onNotificationAllMessagesClick={handleNotificationAllMessagesClick}
-          unreadMessageIds={unreadMessageIds}
+          unreadMessageIds={visibleUnreadMessageIds}
           showModeTabs={isTitleMenuVisible && !isProjectDetailPage}
           showDivider={isTitleMenuVisible || isProjectDetailPage}
           sidebarCollapsed={isSidebarCollapsed}
+          isLoggedIn={isLoggedIn}
           profileAvatarSrc={profileAvatarSrc}
+          onLoginClick={() => setIsLoginModalOpen(true)}
           projectDetailTitle={isProjectDetailPage ? currentProjectDetail.title : null}
           onProjectDetailBack={handleProjectDetailBack}
           projectDetailMenuOpen={isProjectDetailPage && isProjectDetailMenuOpen}
@@ -6166,15 +6535,15 @@ export function HomePage() {
                 viewMode={viewMode}
                 onViewModeChange={handleViewModeChange}
                 messageMode={messageMode}
-                messageUnreadCounts={messageUnreadCounts}
+                messageUnreadCounts={visibleMessageUnreadCounts}
                 onMessageModeChange={handleMessageModeChange}
                 activeTab={activeTab}
                 onActiveTabChange={handleActiveTabChange}
                 searchValue={searchValue}
                 onSearchValueChange={handleSearchValueChange}
                 onInvoiceClick={() => setIsInvoiceModalOpen(true)}
-                onRechargeClick={() => setIsRechargeModalOpen(true)}
-                onMarkAllReadClick={() => setIsMarkAllReadModalOpen(true)}
+                onRechargeClick={handleRechargeClick}
+                onMarkAllReadClick={() => handleOpenMarkAllReadModal(messageMode)}
                 canMarkAllRead={canMarkAllRead}
                 onCreateProjectClick={() => setIsCreateProjectModalOpen(true)}
               />
@@ -6231,24 +6600,63 @@ export function HomePage() {
       {isRechargeModalOpen && (
         <RechargeModal onClose={() => setIsRechargeModalOpen(false)} />
       )}
+      {isLoginModalOpen && (
+        <LoginModal
+          onClose={() => setIsLoginModalOpen(false)}
+          onLogin={(phone) => {
+            const nextCurrentUser = loginMockUser(phone);
+
+            setCurrentUser(nextCurrentUser);
+            setProfileAvatarSrc(nextCurrentUser.avatarSrc);
+            setProfileNickname(nextCurrentUser.nickname);
+          }}
+          onPrivacyClick={() => handleOpenPolicyModal('privacy')}
+          onTermsClick={() => handleOpenPolicyModal('agreement')}
+        />
+      )}
       {isMarkAllReadModalOpen && (
         <MarkAllReadModal
           onClose={() => setIsMarkAllReadModalOpen(false)}
           onConfirm={() => {
-            setUnreadMessageIds(new Set());
+            const targetMessageIds = new Set(
+              messagesByMode[markAllReadTargetMode].map((message) => message.id),
+            );
+
+            setUnreadMessageIds((currentUnreadIds) => {
+              const nextUnreadIds = new Set(currentUnreadIds);
+
+              targetMessageIds.forEach((messageId) => {
+                nextUnreadIds.delete(messageId);
+              });
+
+              return nextUnreadIds;
+            });
             setPendingReadMessageIds(new Set());
           }}
+        />
+      )}
+      {isLogoutConfirmModalOpen && (
+        <LogoutConfirmModal
+          onClose={() => setIsLogoutConfirmModalOpen(false)}
+          onConfirm={logoutMockUser}
         />
       )}
       {isProfileModalOpen && (
         <ProfileModal
           avatarSrc={profileAvatarSrc}
+          nickname={profileNickname}
+          presetAvatarSrcs={profilePresetAvatarSrcs}
           onAvatarChange={handleProfileAvatarChange}
-          onClose={() => setIsProfileModalOpen(false)}
+          onAvatarPresetSelect={handleProfileAvatarPresetSelect}
+          onNicknameChange={handleProfileNicknameChange}
+          onClose={handleCloseProfileModal}
         />
       )}
       {isPolicyModalOpen && (
-        <PolicyModal onClose={() => setIsPolicyModalOpen(false)} />
+        <PolicyModal
+          initialTab={initialPolicyTab}
+          onClose={() => setIsPolicyModalOpen(false)}
+        />
       )}
       {isCreateProjectModalOpen && (
         <ProjectNameModal
