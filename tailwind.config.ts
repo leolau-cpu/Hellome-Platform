@@ -1,0 +1,117 @@
+import type { Config } from 'tailwindcss';
+
+export default {
+  content: ['./index.html', './src/**/*.{ts,tsx}'],
+  theme: {
+    extend: {
+      colors: {
+        text: {
+          primary: '#000000',
+          secondary: '#666666',
+          hint: '#999999',
+          placeholder: '#B3B3B3',
+          disabled: '#CCCCCC',
+          inverse: '#FFFFFF',
+        },
+        bg: {
+          strong: '#EAEAEA',
+          medium: '#F3F3F3',
+          soft: '#F9F9F9',
+          black: '#000000',
+          white: '#FFFFFF',
+        },
+        border: {
+          subtle: '#F3F3F3',
+          default: '#EAEAEA',
+          strong: '#E5E5E5',
+          selected: '#000000',
+        },
+        button: {
+          primary: {
+            DEFAULT: '#000000',
+            hover: '#333333',
+            active: '#000000',
+          },
+          warning: {
+            DEFAULT: '#C42B1C',
+            hover: '#B3261A',
+            active: '#AA2217',
+          },
+          notice: {
+            DEFAULT: '#FF922B',
+            hover: '#F28B29',
+            active: '#E68327',
+          },
+        },
+        accent: {
+          orange: '#FF922B',
+          red: '#FF5C4D',
+          redSoft: 'rgb(255 92 77 / 0.16)',
+          error: '#D94E41',
+          blue: '#1685FE',
+          link: '#0074D9',
+          teal: '#146666',
+          green: '#1DBF73',
+          success: '#219B5A',
+          successBorder: '#27B66A',
+          toolbar: '#262626',
+        },
+        overlay: {
+          mask: 'rgb(0 0 0 / 0.08)',
+          edge: 'rgb(0 0 0 / 0.08)',
+          clear: 'rgb(0 0 0 / 0)',
+        },
+      },
+      fontSize: {
+        xxs: ['10px', '13px'],
+        label: ['11px', '14px'],
+        xs: ['12px', '16px'],
+        sm: ['14px', '20px'],
+        base: ['16px', '24px'],
+        lg: ['18px', '26px'],
+        xl: ['20px', '28px'],
+        '2xl': ['24px', '32px'],
+        '3xl': ['28px', '36px'],
+        '4xl': ['32px', '40px'],
+        '5xl': ['40px', '48px'],
+      },
+      borderRadius: {
+        icon: '4px',
+        button: '8px',
+        card: '12px',
+        modal: '16px',
+        toolbar: '15px',
+        pill: '999px',
+      },
+      boxShadow: {
+        'border-subtle': 'inset 0 0 0 1px #F3F3F3',
+        'border-default': 'inset 0 0 0 1px #EAEAEA',
+        'border-strong': 'inset 0 0 0 1px #E5E5E5',
+        'border-selected': 'inset 0 0 0 1px #000000',
+        'border-selected-strong': 'inset 0 0 0 1.5px #000000',
+        'border-top-subtle': 'inset 0 1px 0 #F3F3F3',
+        'border-bottom-subtle': 'inset 0 -1px 0 #F3F3F3',
+        'border-bottom-default': 'inset 0 -1px 0 #EAEAEA',
+        'avatar-border': '0 0 0 1px rgb(0 0 0 / 0.04)',
+        'card-hover': '0 8px 24px rgb(0 0 0 / 0.05)',
+        popover: 'inset 0 0 0 1px #EAEAEA, 0 8px 24px rgb(0 0 0 / 0.05)',
+        'popover-strong':
+          'inset 0 0 0 1px #E5E5E5, 0 8px 24px rgb(0 0 0 / 0.05), 0 0 24px rgb(0 0 0 / 0.05)',
+      },
+      backdropBlur: {
+        qr: '8px',
+      },
+      fontFamily: {
+        sans: [
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'sans-serif',
+        ],
+      },
+    },
+  },
+  plugins: [],
+} satisfies Config;

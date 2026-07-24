@@ -1,0 +1,159 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      'Segoe UI', sans-serif;
+    color-scheme: light;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-bg-soft text-text-primary;
+    margin: 0;
+    min-width: 320px;
+    min-height: 100vh;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+@layer components {
+  .font-logo {
+    font-family: 'Zen Dots', ui-sans-serif, system-ui, -apple-system,
+      BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-weight: 400;
+  }
+}
+
+@layer utilities {
+  .agent-card-grid {
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(max(260px, calc((100% - 96px) / 7)), 1fr)
+    );
+  }
+
+  .project-card-grid {
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(max(360px, calc((100% - 80px) / 6)), 1fr)
+    );
+  }
+
+  .home-page-scroll {
+    --home-filter-padding: 24px;
+    --home-sticky-spacer-height: 0px;
+    --home-results-min-height: calc(100vh - 160px);
+    overflow-anchor: none;
+  }
+
+  .home-sticky-spacer {
+    height: var(--home-sticky-spacer-height, 0px);
+    pointer-events: none;
+  }
+
+  .home-results-scroll {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+
+  .home-results-content {
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    min-height: var(--home-results-min-height, calc(100vh - 160px));
+    padding-bottom: 24px;
+  }
+
+  .home-results-content > .border-dashed {
+    min-height: max(
+      0px,
+      calc(var(--home-results-min-height, calc(100vh - 160px)) - 24px)
+    );
+  }
+
+  .home-filter-bar {
+    padding-bottom: var(--home-filter-padding, 24px);
+    padding-top: var(--home-filter-padding, 24px);
+  }
+
+  .account-billing-tabs-bar {
+    padding-bottom: 24px;
+    padding-top: 24px;
+  }
+
+  .account-search-field {
+    container-type: inline-size;
+    flex: none;
+    max-width: 240px;
+    min-width: 128px;
+  }
+
+  @container (max-width: 48px) {
+    .account-search-input {
+      justify-content: center;
+      overflow: hidden;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+
+    .account-search-input input,
+    .account-search-input button {
+      display: none;
+    }
+  }
+
+  .project-collapse-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 200ms ease-out, opacity 160ms ease-out;
+    opacity: 0;
+  }
+
+  .project-collapse-panel[data-animate='false'] {
+    transition: none;
+  }
+
+  .project-collapse-panel[data-open='true'] {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-fade-left {
+    background: linear-gradient(
+      90deg,
+      rgb(249 249 249) 0%,
+      rgb(249 249 249) 60%,
+      rgb(249 249 249 / 0) 100%
+    );
+  }
+
+  .tab-fade-right {
+    background: linear-gradient(
+      90deg,
+      rgb(249 249 249 / 0) 0%,
+      rgb(249 249 249) 40%,
+      rgb(249 249 249) 100%
+    );
+  }
+}
