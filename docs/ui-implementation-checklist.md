@@ -13,7 +13,7 @@
 - 选中态边框或下划线使用 `border-border-selected`。
 - 通用图标使用 `Icon` 组件，图标名称沿用 Figma / Lucide 原始名称。
 - 默认图标使用 `md`，即 `16px / 1px`；其他常规尺寸只使用 `sm`、`lg`、`xl`、`2xl`；`xs` 只用于控件内部极小图标。
-- 页面操作优先使用 `Button` 或 `ButtonLink`，不要在页面内手写按钮颜色、尺寸和圆角。
+- 页面操作优先使用 `Button` 或 `ButtonLink`；线框按钮和文字按钮按背景传入 `surface="white"` 或 `surface="soft"`，链接按钮单独使用 `ButtonLink tone="black" | "red" | "yellow" | "green"`，不要在页面内手写按钮颜色、尺寸和圆角。
 - 分类筛选、视图切换等单个 Tab 按钮使用 `TabButton`，不要在页面内手写 Tab hover / selected 状态。
 - 横向分类导航使用 `TabBar`，不要在页面内手写横向滚动、渐变遮罩或箭头按钮逻辑。
 - 页面搜索、筛选搜索、列表检索统一使用 `SearchInput`，不要在页面内手写搜索框结构和清空按钮。

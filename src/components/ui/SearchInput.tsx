@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { InputHTMLAttributes } from 'react';
 import { Icon } from './Icon';
 
@@ -31,6 +31,7 @@ export function SearchInput({
   onMouseDown,
   ...props
 }: SearchInputProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
   const [internalValue, setInternalValue] = useState(defaultValue);
   const currentValue = value ?? internalValue;
   const hasValue = currentValue.length > 0;
@@ -46,7 +47,7 @@ export function SearchInput({
   return (
     <label
       className={mergeClassNames(
-        'group flex items-center rounded-button border border-border-strong text-text-hint hover:border-border-selected hover:text-text-primary focus-within:border-border-selected focus-within:text-text-primary',
+        'group flex items-center rounded-button border border-border-strong text-text-hint hover:border-border-hover active:border-border-selected active:text-text-primary focus-within:!border-border-selected focus-within:text-text-primary',
         sizeClassNames[size],
         className,
       )}
@@ -54,6 +55,7 @@ export function SearchInput({
       <Icon name="Search" className="shrink-0" />
       <input
         {...props}
+        ref={inputRef}
         className="ml-2 min-w-0 flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-hint outline-none"
         type="text"
         value={currentValue}
@@ -78,7 +80,13 @@ export function SearchInput({
           className="ml-2 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-pill bg-text-hint text-text-inverse hover:bg-text-secondary active:bg-text-primary"
           type="button"
           aria-label="清空搜索"
-          onClick={() => updateValue('')}
+          onMouseDown={(event) => {
+            event.preventDefault();
+          }}
+          onClick={() => {
+            updateValue('');
+            inputRef.current?.focus({ preventScroll: true });
+          }}
         >
           <Icon name="X" size="xs" />
         </button>

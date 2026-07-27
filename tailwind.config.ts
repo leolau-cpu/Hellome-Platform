@@ -24,6 +24,7 @@ export default {
           subtle: '#F3F3F3',
           default: '#EAEAEA',
           strong: '#E5E5E5',
+          hover: '#B3B3B3',
           selected: '#000000',
         },
         button: {

@@ -57,6 +57,7 @@ const colorGroups = [
       { token: 'border.subtle', className: 'bg-border-subtle' },
       { token: 'border.default', className: 'bg-border-default' },
       { token: 'border.strong', className: 'bg-border-strong' },
+      { token: 'border.hover', className: 'bg-border-hover' },
       { token: 'border.selected', className: 'bg-border-selected' },
     ],
   },
@@ -209,7 +210,7 @@ export function DesignSystemPage() {
           index="03"
           name="Button"
           title="按钮"
-          description="Button 用于触发页面操作。当前封装包含操作强度、尺寸、禁用态和加载态；hover 与 active 状态通过真实鼠标交互检查。"
+          description="Button 用于触发页面操作。当前封装包含 variant、size、surface、selected、disabled 和 loading；线框按钮和文字按钮通过 surface 适配白底与灰底的 hover / active 反馈。"
         >
           <div className="grid gap-1">
             {buttonVariants.map((variant) => (
@@ -227,6 +228,30 @@ export function DesignSystemPage() {
                 </Button>
               </Row>
             ))}
+            <Row label="surface: white">
+              <Button variant="secondary" surface="white">
+                线框按钮
+              </Button>
+              <Button variant="secondary" surface="white" selected>
+                选中按钮
+              </Button>
+              <Button variant="text" surface="white">
+                文字按钮
+              </Button>
+            </Row>
+            <Row label="surface: soft">
+              <div className="flex flex-wrap items-center gap-3 rounded-button bg-bg-soft p-4">
+                <Button variant="secondary" surface="soft">
+                  线框按钮
+                </Button>
+                <Button variant="secondary" surface="soft" selected>
+                  选中按钮
+                </Button>
+                <Button variant="text" surface="soft">
+                  文字按钮
+                </Button>
+              </div>
+            </Row>
           </div>
         </Section>
 
@@ -255,43 +280,36 @@ export function DesignSystemPage() {
           index="05"
           name="ButtonLink"
           title="链接型按钮"
-          description="ButtonLink 用于需要链接语义的操作入口，视觉上与 Button 共享同一套 variant 和 size 规范。"
+          description="ButtonLink 用于需要链接语义的操作入口。链接按钮不使用填充和描边，只通过 tone 控制文字颜色。"
         >
           <div className="flex flex-wrap items-center gap-3">
             <ButtonLink
               href="#preview"
-              variant="primary"
+              tone="black"
               onClick={(event) => event.preventDefault()}
             >
-              主链接
+              黑字链接
             </ButtonLink>
             <ButtonLink
               href="#preview"
-              variant="secondary"
+              tone="red"
               onClick={(event) => event.preventDefault()}
             >
-              辅助链接
+              红字链接
             </ButtonLink>
             <ButtonLink
               href="#preview"
-              variant="text"
+              tone="yellow"
               onClick={(event) => event.preventDefault()}
             >
-              文字链接
+              黄字链接
             </ButtonLink>
             <ButtonLink
               href="#preview"
-              variant="warning"
+              tone="green"
               onClick={(event) => event.preventDefault()}
             >
-              警示链接
-            </ButtonLink>
-            <ButtonLink
-              href="#preview"
-              variant="notice"
-              onClick={(event) => event.preventDefault()}
-            >
-              提示链接
+              绿字链接
             </ButtonLink>
           </div>
         </Section>

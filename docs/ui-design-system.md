@@ -69,6 +69,7 @@
 | `border.subtle` | `#F3F3F3` | 弱分割线，用在白色背景 `bg.white` 上，适合卡片内部、列表轻分割 |
 | `border.default` | `#EAEAEA` | 默认分割线，用在浅灰背景 `bg.soft` 上，适合卡片边框、表单边框 |
 | `border.strong` | `#E5E5E5` | 强分割线，用在中灰或深灰背景 `bg.medium` / `bg.strong` 上，适合模块边界 |
+| `border.hover` | `#B3B3B3` | 搜索框等输入控件的 hover 描边 |
 | `border.selected` | `#000000` | 选中态下划线、选中边框 |
 
 ### 3.2.1 分割线执行规则
@@ -165,8 +166,10 @@
 | `button.primary.hover` | 主按钮 | 悬停 | `#333333` | `#FFFFFF` | none |
 | `button.primary.active` | 主按钮 | 点击 / 选中 | `#000000` | `#FFFFFF` | none |
 | `button.secondary.default` | 辅助按钮 / 线框按钮 | 默认 | transparent | `#000000` | `1px` 内描边 `#E5E5E5` |
-| `button.secondary.hover` | 辅助按钮 / 线框按钮 | 悬停 | `#F9F9F9` | `#000000` | `1px` 内描边 `#E5E5E5` |
-| `button.secondary.active` | 辅助按钮 / 线框按钮 | 点击 / 选中 | `#F3F3F3` | `#000000` | `1px` 内描边 `#E5E5E5` |
+| `button.secondary.white.hover` | 辅助按钮 / 线框按钮 | 白底悬停 | `#F9F9F9` | `#000000` | `1px` 内描边 `#E5E5E5` |
+| `button.secondary.white.active` | 辅助按钮 / 线框按钮 | 白底点击 / 选中 | `#F3F3F3` | `#000000` | `1px` 内描边 `#E5E5E5` |
+| `button.secondary.soft.hover` | 辅助按钮 / 线框按钮 | 灰底悬停 | `#F3F3F3` | `#000000` | `1px` 内描边 `#E5E5E5` |
+| `button.secondary.soft.active` | 辅助按钮 / 线框按钮 | 灰底点击 / 选中 | `#EAEAEA` | `#000000` | `1px` 内描边 `#E5E5E5` |
 | `button.warning.default` | 警示按钮 | 默认 | `#C42B1C` | `#FFFFFF` | none |
 | `button.warning.hover` | 警示按钮 | 悬停 | `#B3261A` | `#FFFFFF` | none |
 | `button.warning.active` | 警示按钮 | 点击 / 选中 | `#AA2217` | `#FFFFFF` | none |
@@ -174,8 +177,14 @@
 | `button.notice.hover` | 提示按钮 | 悬停 | `#F28B29` | `#FFFFFF` | none |
 | `button.notice.active` | 提示按钮 | 点击 / 选中 | `#E68327` | `#FFFFFF` | none |
 | `button.text.default` | 文字按钮 | 默认 | transparent | `#000000` | none |
-| `button.text.hover` | 文字按钮 | 悬停 | `#F3F3F3` | `#000000` | none |
-| `button.text.active` | 文字按钮 | 点击 / 选中 | `#EAEAEA` | `#000000` | none |
+| `button.text.white.hover` | 文字按钮 | 白底悬停 | `#F9F9F9` | `#000000` | none |
+| `button.text.white.active` | 文字按钮 | 白底点击 / 选中 | `#F3F3F3` | `#000000` | none |
+| `button.text.soft.hover` | 文字按钮 | 灰底悬停 | `#F3F3F3` | `#000000` | none |
+| `button.text.soft.active` | 文字按钮 | 灰底点击 / 选中 | `#EAEAEA` | `#000000` | none |
+| `button.link.black` | 链接按钮 | 默认 | transparent | `#000000` | none |
+| `button.link.red` | 链接按钮 | 默认 | transparent | `#D94E41` | none |
+| `button.link.yellow` | 链接按钮 | 默认 | transparent | `#FF922B` | none |
+| `button.link.green` | 链接按钮 | 默认 | transparent | `#219B5A` | none |
 | `button.disabled` | 通用禁用态 | 禁用 | transparent | `#CCCCCC` | `1px solid #E5E5E5` |
 
 ### 5.3 按钮圆角
@@ -190,6 +199,8 @@
 - 每个页面只保留一个最强主按钮。
 - 主按钮使用 `primary`，不要用彩色渐变代替。
 - 次级操作使用 `secondary` 或 `text`。
+- 线框按钮和文字按钮叠加在白色背景时使用 `surface="white"`；叠加在灰色背景时使用 `surface="soft"`。
+- 链接按钮使用 `ButtonLink`，不使用填充和描边，只通过 `tone="black" | "red" | "yellow" | "green"` 控制文字颜色。
 - 提示类操作使用 `notice`，例如充值、付费确认、额度提醒等带橙色引导的操作。
 - 危险操作才使用 `warning`。
 - 默认按钮尺寸使用 `lg`，即 `36px` 高。
@@ -202,6 +213,7 @@
 - 按钮描边不计入按钮外部尺寸，不额外增加按钮宽高。
 - 禁用按钮必须同时体现禁用文字和禁用边框。
 - 所有按钮禁用态统一使用 `button.disabled`，不保留原按钮类型背景。
+- 按钮 `loading` / `处理中` 状态必须在文字前使用 `loader-circle` 旋转图标。
 - 按钮文字默认单行显示；文案过长时优先缩短文案，不通过增加高度解决。
 - 常规按钮圆角为 `8px`，不要随意使用超大圆角。
 
@@ -259,7 +271,8 @@ SearchInput 用于页面内搜索、筛选搜索和列表检索。页面内不�
 | State | Border | Icon | Text | Clear Button |
 | --- | --- | --- | --- | --- |
 | `default` | `border.strong` | `text.hint` | `text.primary` | hidden |
-| `hover` | `border.selected` | `text.primary` | `text.primary` | 按输入状态显示 |
+| `hover` | `border.hover` | `text.hint` | `text.primary` | 按输入状态显示 |
+| `active` | `border.selected` | `text.primary` | `text.primary` | 按输入状态显示 |
 | `focus` | `border.selected` | `text.primary` | `text.primary` | 按输入状态显示 |
 | `hasValue` | 按 hover / focus 状态 | 按 hover / focus 状态 | `text.primary` | visible |
 
