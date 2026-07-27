@@ -1,9 +1,18 @@
+import {
+  readMockStorageValue,
+  removeMockStorageValue,
+  writeMockStorageValue,
+} from './mock/mockStorage';
+
+export type MockUserDataMode = 'with-data' | 'empty-data';
+
 export type MockUser = {
   id: string;
   phone: string;
   loginAt: number;
   avatarSrc: string;
   nickname: string;
+  dataMode: MockUserDataMode;
 };
 
 export type MockUserProfile = Pick<MockUser, 'avatarSrc' | 'nickname'>;
@@ -11,7 +20,8 @@ export type MockUserProfile = Pick<MockUser, 'avatarSrc' | 'nickname'>;
 export const mockUserChangedEventName = 'hellome-mock-user-changed';
 export const defaultProfileNickname = '哈啰蜜moleaa';
 
-const mockUserStorageKey = 'hellome.loginSession';
+const legacyLoginSessionStorageKey = 'hellome.loginSession';
+const currentMockUserIdStorageKey = 'currentUserId';
 
 export const defaultAvatarSrcs = [
   '/assets/avatars/avatar-female-1.png',
@@ -32,6 +42,16 @@ function getRandomDefaultAvatarSrc() {
 
 function getMockUserId(phone: string) {
   return `mock-user-${phone}`;
+}
+
+function getMockUserDataMode(phone: string): MockUserDataMode {
+  if (phone === '16666666666') return 'empty-data';
+
+  return 'with-data';
+}
+
+function getMockUserStorageKey(userId: string) {
+  return `users.${userId}.profile`;
 }
 
 function parseMockUser(value: string | null): MockUser | null {
@@ -62,6 +82,11 @@ function parseMockUser(value: string | null): MockUser | null {
           parsedValue.nickname.trim().length > 0
             ? parsedValue.nickname
             : defaultProfileNickname,
+        dataMode:
+          parsedValue.dataMode === 'empty-data' ||
+          parsedValue.dataMode === 'with-data'
+            ? parsedValue.dataMode
+            : getMockUserDataMode(parsedValue.phone),
       };
     }
   } catch {
@@ -76,25 +101,66 @@ function dispatchMockUserChangedEvent() {
 }
 
 function saveMockUser(user: MockUser) {
-  window.localStorage.setItem(mockUserStorageKey, JSON.stringify(user));
+  writeMockStorageValue(getMockUserStorageKey(user.id), user);
+  writeMockStorageValue(currentMockUserIdStorageKey, user.id);
   dispatchMockUserChangedEvent();
 
   return user;
 }
 
+function getMockUserById(userId: string) {
+  return readMockStorageValue<MockUser | null>(
+    getMockUserStorageKey(userId),
+    null,
+  );
+}
+
+function getLegacyMockUser() {
+  if (typeof window === 'undefined') return null;
+
+  return parseMockUser(window.localStorage.getItem(legacyLoginSessionStorageKey));
+}
+
 export function getCurrentMockUser() {
   if (typeof window === 'undefined') return null;
 
-  return parseMockUser(window.localStorage.getItem(mockUserStorageKey));
+  const currentUserId = readMockStorageValue<string | null>(
+    currentMockUserIdStorageKey,
+    null,
+  );
+
+  if (currentUserId !== null) {
+    return getMockUserById(currentUserId);
+  }
+
+  const legacyUser = getLegacyMockUser();
+
+  if (legacyUser === null) return null;
+
+  saveMockUser(legacyUser);
+  window.localStorage.removeItem(legacyLoginSessionStorageKey);
+
+  return legacyUser;
 }
 
 export function loginMockUser(phone: string): MockUser {
+  const userId = getMockUserId(phone);
+  const storedUser = getMockUserById(userId);
+
+  if (storedUser !== null) {
+    return saveMockUser({
+      ...storedUser,
+      loginAt: Date.now(),
+    });
+  }
+
   return saveMockUser({
-    id: getMockUserId(phone),
+    id: userId,
     phone,
     loginAt: Date.now(),
     avatarSrc: getRandomDefaultAvatarSrc(),
     nickname: defaultProfileNickname,
+    dataMode: getMockUserDataMode(phone),
   });
 }
 
@@ -114,6 +180,7 @@ export function updateMockUserProfile(profile: Partial<MockUserProfile>) {
 export function logoutMockUser() {
   if (typeof window === 'undefined') return;
 
-  window.localStorage.removeItem(mockUserStorageKey);
+  removeMockStorageValue(currentMockUserIdStorageKey);
+  window.localStorage.removeItem(legacyLoginSessionStorageKey);
   dispatchMockUserChangedEvent();
 }

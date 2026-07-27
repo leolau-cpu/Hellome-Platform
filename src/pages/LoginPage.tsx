@@ -55,14 +55,16 @@ function LoginInput({
           ? 'shadow-[inset_0_0_0_1px_#FF5C4D]'
           : disabled
             ? 'shadow-border-subtle'
-            : 'shadow-border-strong focus-within:shadow-border-selected',
+            : readOnly
+              ? 'shadow-border-strong'
+              : 'shadow-border-strong focus-within:shadow-border-selected',
       ].join(' ')}
       htmlFor={id}
       onMouseDown={(event) => {
         if (!readOnly) return;
 
         const target = event.target as HTMLElement | null;
-        if (target?.closest('button')) return;
+        if (target?.closest('button:not(:disabled)')) return;
 
         event.preventDefault();
       }}
@@ -80,6 +82,11 @@ function LoginInput({
         disabled={disabled}
         readOnly={readOnly}
         tabIndex={readOnly ? -1 : undefined}
+        onFocus={(event) => {
+          if (readOnly) {
+            event.currentTarget.blur();
+          }
+        }}
         onChange={(event) => onChange(event.target.value.replace(/\D/g, ''))}
       />
       {clearable && value.length > 0 && !disabled && (
@@ -337,6 +344,11 @@ export function LoginModal({
 }: LoginModalProps) {
   const [isVisible, setIsVisible] = useState(false);
   const closeTimerRef = useRef<number | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   const closeWithAnimation = useCallback(() => {
     setIsVisible(false);
@@ -346,9 +358,9 @@ export function LoginModal({
     }
 
     closeTimerRef.current = window.setTimeout(() => {
-      onClose();
+      onCloseRef.current();
     }, 180);
-  }, [onClose]);
+  }, []);
 
   useEffect(() => {
     const animationFrame = window.requestAnimationFrame(() => {
@@ -382,7 +394,7 @@ export function LoginModal({
     <div
       className={[
         'fixed inset-0 z-50 flex items-center justify-center bg-bg-black/60 p-6 text-text-primary transition-opacity duration-200 ease-out',
-        isVisible ? 'opacity-100' : 'opacity-0',
+        isVisible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
       ].join(' ')}
       role="presentation"
       onClick={closeWithAnimation}

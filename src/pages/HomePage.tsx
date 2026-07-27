@@ -9,6 +9,37 @@ import {
   updateMockUserProfile,
   type MockUser,
 } from '../api/mockUserApi';
+import {
+  getMockMessageUnreadCounts,
+  getMockMessages,
+  getUnreadMockMessageIds,
+  markAllMockMessagesRead,
+  markMockMessageRead,
+  mockMessagesChangedEventName,
+  pushMockMessage,
+  resetMockMessages,
+  type MockMessage,
+  type MockMessageByMode,
+  type MockMessageMode,
+} from '../api/mock/mockMessageApi';
+import {
+  getMockProjects,
+  mockProjectsChangedEventName,
+  resetMockProjects,
+  saveCurrentMockProjects,
+  type MockProject,
+  type MockProjectItem,
+} from '../api/mock/mockProjectApi';
+import {
+  getMockAccountData,
+  mockAccountChangedEventName,
+  resetMockAccountData,
+  type MockAccountData,
+  type MockAccountStat,
+  type MockBillingDetail,
+  type MockProductBillingDetail,
+  type MockRequestBillingDetail,
+} from '../api/mock/mockAccountApi';
 import { Button } from '../components/ui/Button';
 import { Icon, SortChevronsIcon } from '../components/ui/Icon';
 import { SearchInput } from '../components/ui/SearchInput';
@@ -257,7 +288,7 @@ const previewWorkflowCards = [
   ...workflowCards,
 ];
 
-const projects = [
+const projects: MockProject[] = [
   {
     id: 'classic-video',
     title: '经典版视频管家项目',
@@ -442,14 +473,14 @@ const projects = [
   },
 ];
 
-type Project = (typeof projects)[number];
+type Project = MockProject;
 type ProjectDetailMode = (typeof projectDetailModeTabs)[number];
 
 function formatProjectCreatedAt(date = new Date()) {
   return `${date.getMonth() + 1}月${date.getDate()}日创建`;
 }
 
-const accountStats = [
+const accountStats: MockAccountStat[] = [
   {
     title: '账户总览',
     description: '包含当前所有项目、智能体、工作流消耗明细',
@@ -476,9 +507,9 @@ const accountStats = [
       ['已购买空间', '512 MB'],
     ],
   },
-] as const;
+];
 
-const billingDetails = [
+const billingDetails: MockBillingDetail[] = [
   {
     id: 'bill-50',
     date: '2026/05/26 16:05:02',
@@ -607,82 +638,7 @@ const billingDetails = [
   },
 ];
 
-const announcementMessages = [
-  {
-    id: 'welcome-points',
-    title: '🎁 欢迎加入！1000 积分新人礼已到账',
-    time: '2分钟前',
-    unread: true,
-    content: '恭喜您注册成功！为了助力您的 AI 创作之旅，我们已向您的账户发放了 1000 积分。',
-    action: '查看详情',
-  },
-  {
-    id: 'payment-success',
-    title: '🎉 支付成功：年度会员订阅通知',
-    time: '1小时前',
-    unread: true,
-    content: '您的年度会员订阅已支付成功，会员权益已经自动生效。',
-    action: '查看详情',
-  },
-  {
-    id: 'agent-published',
-    title: '恭喜！您的「智能客服助手 Pro」已成功上架',
-    time: '3天前',
-    unread: true,
-    content: '智能体已通过平台审核并成功上架，您可以前往项目中心查看运行情况。',
-    action: '查看详情',
-  },
-  {
-    id: 'workflow-paused',
-    title: '您的定时工作流已暂停',
-    time: '1周前',
-    unread: false,
-    content:
-      '系统检测到工作流触发条件暂不可用，已为您暂停本次定时任务。\n您可以进入项目中心检查触发配置后重新开启。',
-  },
-  {
-    id: 'workflow-success',
-    title: '🎉 定时工作流运行成功',
-    time: '2月前',
-    unread: false,
-    content: '您的定时工作流已完成运行，生成结果可在项目中心查看。',
-  },
-  {
-    id: 'points-not-enough',
-    title: '由于积分不足，您的定时工作流无法运行',
-    time: '2025/06/12',
-    unread: false,
-    content: '账户积分不足，当前工作流暂时无法运行。充值后可继续执行。',
-  },
-  {
-    id: 'agent-review-failed',
-    title: '您的「智能客服助手 Pro」审核未通过！',
-    time: '2025/05/20',
-    unread: false,
-    content: '智能体内容未满足平台发布要求，请调整后重新提交审核。',
-  },
-] as const;
-
-type ProductBillingDetail = {
-  id: string;
-  model: string;
-  type: string;
-  amount: string;
-  icon: string;
-};
-
-type RequestBillingDetail = {
-  id: string;
-  model: string;
-  time: string;
-  apiKey: string;
-  tokens: string;
-  originalAmount: string;
-  amount: string;
-  icon: string;
-};
-
-const productBillingDetails: ProductBillingDetail[] = [
+const productBillingDetails: MockProductBillingDetail[] = [
   {
     id: 'product-kimi',
     model: 'Kimi-K3',
@@ -741,7 +697,7 @@ const productBillingDetails: ProductBillingDetail[] = [
   },
 ];
 
-const requestBillingDetails: RequestBillingDetail[] = [
+const requestBillingDetails: MockRequestBillingDetail[] = [
   {
     id: 'request-kimi',
     model: 'Kimi-K3',
@@ -824,58 +780,20 @@ const requestBillingDetails: RequestBillingDetail[] = [
   },
 ];
 
-const activityMessages = [
-  {
-    id: 'team-invite',
-    title: '团队成员 Lucy 已加入项目空间',
-    time: '刚刚',
-    unread: true,
-    content: 'Lucy 已通过邀请加入项目空间，现在可以协作查看项目任务和运行记录。',
-  },
-  {
-    id: 'apikey-created',
-    title: '新的 APIKey 已创建',
-    time: '18分钟前',
-    unread: true,
-    content: '您刚刚创建了一个新的 APIKey。为了账户安全，请妥善保存并避免公开分享。',
-  },
-  {
-    id: 'project-renamed',
-    title: '项目「增长实验」已重命名',
-    time: '昨天',
-    unread: false,
-    content: '项目名称已从「增长实验」更新为「增长实验 07」。相关任务和历史记录不受影响。',
-  },
-  {
-    id: 'storage-cleanup',
-    title: '云端空间自动整理完成',
-    time: '4天前',
-    unread: false,
-    content: '系统已完成临时文件整理，为您释放了 128 MB 云端空间。',
-  },
-  {
-    id: 'member-permission',
-    title: '成员权限已更新',
-    time: '2026/07/02',
-    unread: false,
-    content: '项目成员 Marvin 的权限已更新为可编辑，可继续参与当前项目协作。',
-  },
-] as const;
-
-const messagesByMode = {
-  announcements: announcementMessages,
-  activity: activityMessages,
-} as const;
-
-const allMessages = [...announcementMessages, ...activityMessages] as const;
+const seededAccountData: MockAccountData = {
+  stats: accountStats,
+  billingDetails,
+  productBillingDetails,
+  requestBillingDetails,
+};
 
 type IconName = Parameters<typeof Icon>[0]['name'];
 type ViewMode = 'agents' | 'workflows';
 type PageMode = 'home' | 'projects' | 'account' | 'messages';
-type MessageMode = (typeof messageModeTabs)[number]['value'];
+type MessageMode = MockMessageMode;
 type MessageUnreadCounts = Record<MessageMode, number>;
-type MessageItem = (typeof allMessages)[number];
-type ProjectItem = (typeof projects)[number]['items'][number];
+type MessageItem = MockMessage;
+type ProjectItem = MockProjectItem;
 type PolicyTab = 'privacy' | 'agreement';
 
 const emptyMessageUnreadCounts: MessageUnreadCounts = {
@@ -1025,10 +943,12 @@ function Logo({
   collapsed = false,
   showCollapsedToggle = false,
   onToggle,
+  onLogoClick,
 }: {
   collapsed?: boolean;
   showCollapsedToggle?: boolean;
   onToggle?: () => void;
+  onLogoClick?: () => void;
 }) {
   return (
     <div
@@ -1039,6 +959,11 @@ function Logo({
           ? 'rounded-button hover:bg-bg-white hover:text-text-primary'
           : '',
       ].join(' ')}
+      onClick={() => {
+        if (!collapsed) {
+          onLogoClick?.();
+        }
+      }}
     >
       {collapsed && showCollapsedToggle ? (
         <span className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -1222,6 +1147,116 @@ function ProfilePopover({
   );
 }
 
+function MockDebugPanel({
+  currentUser,
+  onClose,
+  onLoginWithData,
+  onLoginEmptyData,
+  onLogout,
+  onResetMessages,
+  onResetProjects,
+  onResetAccount,
+  onPushAnnouncement,
+  onPushActivity,
+}: {
+  currentUser: MockUser | null;
+  onClose: () => void;
+  onLoginWithData: () => void;
+  onLoginEmptyData: () => void;
+  onLogout: () => void;
+  onResetMessages: () => void;
+  onResetProjects: () => void;
+  onResetAccount: () => void;
+  onPushAnnouncement: () => void;
+  onPushActivity: () => void;
+}) {
+  const isLoggedIn = currentUser !== null;
+  const statusText =
+    currentUser === null
+      ? '未登录'
+      : currentUser.dataMode === 'empty-data'
+        ? '已登录没数据'
+        : '已登录有数据';
+
+  return (
+    <div
+      className="fixed bottom-4 left-4 z-[80] w-[280px] rounded-card bg-bg-white p-3 text-sm leading-5 shadow-popover"
+      role="dialog"
+      aria-label="Mock 调试"
+    >
+      <div className="flex h-8 items-center justify-between">
+        <h2 className="font-medium text-text-primary">Mock 调试</h2>
+        <button
+          className="flex h-8 w-8 items-center justify-center rounded-button hover:bg-bg-soft active:bg-bg-medium"
+          type="button"
+          aria-label="关闭 Mock 调试"
+          onClick={onClose}
+        >
+          <Icon name="X" />
+        </button>
+      </div>
+      <div className="mt-2 rounded-button bg-bg-soft px-3 py-2 text-xs leading-4 text-text-secondary">
+        <p>状态：{statusText}</p>
+        <p>账号：{currentUser?.phone ?? '-'}</p>
+      </div>
+      <div className="mt-3 grid grid-cols-1 gap-2">
+        <Button variant="secondary" size="md" onClick={onLogout}>
+          切到未登录
+        </Button>
+        <Button variant="secondary" size="md" onClick={onLoginWithData}>
+          登录有数据账号
+        </Button>
+        <Button variant="secondary" size="md" onClick={onLoginEmptyData}>
+          登录空数据账号
+        </Button>
+      </div>
+      <div className="mt-3 h-px bg-border-subtle" />
+      <div className="mt-3 grid grid-cols-1 gap-2">
+        <Button
+          variant="secondary"
+          size="md"
+          disabled={!isLoggedIn}
+          onClick={onResetMessages}
+        >
+          重置消息数据
+        </Button>
+        <Button
+          variant="secondary"
+          size="md"
+          disabled={!isLoggedIn}
+          onClick={onResetProjects}
+        >
+          重置项目数据
+        </Button>
+        <Button
+          variant="secondary"
+          size="md"
+          disabled={!isLoggedIn}
+          onClick={onResetAccount}
+        >
+          重置账户数据
+        </Button>
+        <Button
+          variant="secondary"
+          size="md"
+          disabled={!isLoggedIn}
+          onClick={onPushAnnouncement}
+        >
+          推送公告
+        </Button>
+        <Button
+          variant="secondary"
+          size="md"
+          disabled={!isLoggedIn}
+          onClick={onPushActivity}
+        >
+          推送动态
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function SideNav({
   collapsed,
   showCollapsedToggle,
@@ -1237,6 +1272,7 @@ function SideNav({
   onPolicyClick,
   onSupportClick,
   onLogout,
+  onLogoClick,
   onCollapsedMouseEnter,
   onCollapsedMouseLeave,
 }: {
@@ -1254,6 +1290,7 @@ function SideNav({
   onPolicyClick: () => void;
   onSupportClick: () => void;
   onLogout: () => void;
+  onLogoClick: () => void;
   onCollapsedMouseEnter: () => void;
   onCollapsedMouseLeave: () => void;
 }) {
@@ -1316,6 +1353,7 @@ function SideNav({
           collapsed={collapsed}
           showCollapsedToggle={showCollapsedToggle}
           onToggle={onToggle}
+          onLogoClick={onLogoClick}
         />
         {!collapsed && (
           <button
@@ -1622,6 +1660,7 @@ function TitleBar({
   onViewModeChange,
   messageMode,
   notificationMode,
+  messagesByMode,
   messageUnreadCount,
   messageUnreadCounts,
   onMessageModeChange,
@@ -1653,6 +1692,7 @@ function TitleBar({
   onViewModeChange: (value: ViewMode) => void;
   messageMode: MessageMode;
   notificationMode: MessageMode;
+  messagesByMode: MockMessageByMode;
   messageUnreadCount: number;
   messageUnreadCounts: MessageUnreadCounts;
   onMessageModeChange: (value: MessageMode) => void;
@@ -1759,6 +1799,7 @@ function TitleBar({
           {notificationOpen && (
             <NotificationPopover
               messageMode={notificationMode}
+              messagesByMode={messagesByMode}
               unreadCounts={messageUnreadCounts}
               unreadMessageIds={unreadMessageIds}
               isLoggedIn={isLoggedIn}
@@ -1798,7 +1839,9 @@ function TitleBar({
               type="button"
               onClick={onLoginClick}
             >
-              登录/注册
+              <span>登录</span>
+              <span className="-mx-0.5">／</span>
+              <span>注册</span>
             </button>
           )}
         </div>
@@ -1809,6 +1852,7 @@ function TitleBar({
 
 function NotificationPopover({
   messageMode,
+  messagesByMode,
   unreadCounts,
   unreadMessageIds,
   isLoggedIn,
@@ -1819,6 +1863,7 @@ function NotificationPopover({
   onClose,
 }: {
   messageMode: MessageMode;
+  messagesByMode: MockMessageByMode;
   unreadCounts: MessageUnreadCounts;
   unreadMessageIds: Set<string>;
   isLoggedIn: boolean;
@@ -1864,7 +1909,7 @@ function NotificationPopover({
   return (
     <div
       ref={popoverRef}
-      className="fixed right-[150px] top-12 z-40 flex min-h-[196px] w-[400px] flex-col rounded-card bg-bg-white py-2 shadow-popover"
+      className="fixed right-[150px] top-12 z-40 flex max-h-[calc(100vh-96px)] min-h-[196px] w-[400px] flex-col rounded-card bg-bg-white py-2 shadow-popover"
       role="dialog"
       aria-label="消息通知"
       onClick={(event) => event.stopPropagation()}
@@ -1901,10 +1946,16 @@ function NotificationPopover({
       <div className="flex h-4 items-center px-4">
         <div className="h-px w-full bg-border-subtle" />
       </div>
-      <div className="flex flex-col">
+      <div className="scrollbar-none flex min-h-0 flex-1 flex-col overflow-y-auto">
         {popoverMessages.length === 0 ? (
           <div className="flex h-[110px] items-center justify-center px-4 text-sm leading-5 text-text-hint">
-            暂无消息
+            <span className="flex items-center gap-2">
+              <Icon
+                name={isLoggedIn ? 'FolderMinus' : 'MailOpen'}
+                className="shrink-0"
+              />
+              <span>暂无消息</span>
+            </span>
           </div>
         ) : popoverMessages.map((message) => {
           const isUnread = unreadMessageIds.has(message.id);
@@ -2136,6 +2187,11 @@ function InvoiceModal({
 }) {
   const [isVisible, setIsVisible] = useState(false);
   const closeTimerRef = useRef<number | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   const closeWithAnimation = useCallback(() => {
     setIsVisible(false);
@@ -2145,9 +2201,9 @@ function InvoiceModal({
     }
 
     closeTimerRef.current = window.setTimeout(() => {
-      onClose();
+      onCloseRef.current();
     }, 180);
-  }, [onClose]);
+  }, []);
 
   useEffect(() => {
     const animationFrame = window.requestAnimationFrame(() => {
@@ -2181,7 +2237,7 @@ function InvoiceModal({
     <div
       className={[
         'fixed inset-0 z-50 flex items-center justify-center bg-bg-black/60 transition-opacity duration-200 ease-out',
-        isVisible ? 'opacity-100' : 'opacity-0',
+        isVisible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
       ].join(' ')}
       role="presentation"
       onClick={closeWithAnimation}
@@ -2591,7 +2647,7 @@ function PolicyModal({
     <div
       className={[
         'fixed inset-0 z-50 flex items-center justify-center bg-bg-black/40 transition-opacity duration-200 ease-out',
-        isVisible ? 'opacity-100' : 'opacity-0',
+        isVisible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
       ].join(' ')}
       role="presentation"
       onClick={closeWithAnimation}
@@ -2706,7 +2762,7 @@ function MarkAllReadModal({
     <div
       className={[
         'fixed inset-0 z-50 flex items-center justify-center bg-bg-black/60 transition-opacity duration-200 ease-out',
-        isVisible ? 'opacity-100' : 'opacity-0',
+        isVisible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
       ].join(' ')}
       role="presentation"
       onClick={closeWithAnimation}
@@ -2780,6 +2836,11 @@ function LogoutConfirmModal({
 }) {
   const [isVisible, setIsVisible] = useState(false);
   const closeTimerRef = useRef<number | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   const closeWithAnimation = useCallback(() => {
     setIsVisible(false);
@@ -2789,9 +2850,9 @@ function LogoutConfirmModal({
     }
 
     closeTimerRef.current = window.setTimeout(() => {
-      onClose();
+      onCloseRef.current();
     }, 180);
-  }, [onClose]);
+  }, []);
 
   useEffect(() => {
     const animationFrame = window.requestAnimationFrame(() => {
@@ -2825,7 +2886,7 @@ function LogoutConfirmModal({
     <div
       className={[
         'fixed inset-0 z-50 flex items-center justify-center bg-bg-black/60 transition-opacity duration-200 ease-out',
-        isVisible ? 'opacity-100' : 'opacity-0',
+        isVisible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
       ].join(' ')}
       role="presentation"
       onClick={closeWithAnimation}
@@ -3125,16 +3186,18 @@ function RechargeModal({ onClose }: { onClose: () => void }) {
 }
 
 function AccountOverviewCards({
+  stats,
   onInvoiceClick,
   onRechargeClick,
 }: {
+  stats: MockAccountStat[];
   onInvoiceClick: () => void;
   onRechargeClick: () => void;
 }) {
   return (
     <section className="px-12 py-6">
       <div className="grid grid-cols-2 gap-4">
-        {accountStats.map((stat) => (
+        {stats.map((stat) => (
           <article
             key={stat.title}
             className="flex min-w-0 flex-col overflow-hidden rounded-xl bg-bg-white px-6"
@@ -3374,8 +3437,8 @@ function DateFilterButton({
       <button
         data-account-filter-trigger="true"
         className={[
-          'flex h-8 w-full items-center gap-2 rounded-button px-4 py-2 text-sm leading-5 text-text-primary shadow-border-strong hover:bg-bg-medium active:bg-bg-strong',
-          open ? 'bg-bg-strong' : '',
+          'flex h-8 w-full items-center gap-2 rounded-button px-4 py-2 text-sm leading-5 text-text-primary shadow-border-strong active:bg-bg-strong',
+          open ? 'bg-bg-strong' : 'hover:bg-bg-medium',
         ].join(' ')}
         type="button"
         onPointerDown={(event) => {
@@ -3392,7 +3455,14 @@ function DateFilterButton({
         }}
       >
         <span className="min-w-0 flex-1 truncate text-left">{value}</span>
-        <Icon name="Calendar" size="sm" className="shrink-0 text-text-hint" />
+        <Icon
+          name="Calendar"
+          size="sm"
+          className={[
+            'shrink-0',
+            open ? 'text-text-primary' : 'text-text-hint',
+          ].join(' ')}
+        />
       </button>
       {open && (
         <DatePickerPopover
@@ -3672,8 +3742,8 @@ function AccountFilterBar({
               <button
                 data-account-filter-trigger="true"
                 className={[
-                  'flex h-8 w-full items-center gap-2 rounded-button px-4 py-2 text-sm leading-5 text-text-primary shadow-border-strong hover:bg-bg-medium active:bg-bg-strong',
-                  openFilterPopover === 'apiKey' ? 'bg-bg-strong' : '',
+                  'flex h-8 w-full items-center gap-2 rounded-button px-4 py-2 text-sm leading-5 text-text-primary shadow-border-strong active:bg-bg-strong',
+                  openFilterPopover === 'apiKey' ? 'bg-bg-strong' : 'hover:bg-bg-medium',
                 ].join(' ')}
                 type="button"
                 onPointerDown={(event) => {
@@ -3742,6 +3812,7 @@ function StickyHeader({
   onSearchValueChange,
   onInvoiceClick,
   onRechargeClick,
+  accountStatsToShow,
   onMarkAllReadClick,
   canMarkAllRead,
   onCreateProjectClick,
@@ -3758,6 +3829,7 @@ function StickyHeader({
   onSearchValueChange: (value: string) => void;
   onInvoiceClick: () => void;
   onRechargeClick: () => void;
+  accountStatsToShow: MockAccountStat[];
   onMarkAllReadClick: () => void;
   canMarkAllRead: boolean;
   onCreateProjectClick: () => void;
@@ -3832,6 +3904,7 @@ function StickyHeader({
           </div>
         </section>
         <AccountOverviewCards
+          stats={accountStatsToShow}
           onInvoiceClick={onInvoiceClick}
           onRechargeClick={onRechargeClick}
         />
@@ -4155,6 +4228,37 @@ function EmptySearchResult({ title }: { title: string }) {
   );
 }
 
+function EmptyProjectResult({ onCreateProject }: { onCreateProject: () => void }) {
+  return (
+    <div className="flex min-w-0 items-center justify-center rounded-xl border border-dashed border-border-strong bg-bg-white/40 p-4">
+      <div className="flex w-80 flex-col items-center gap-4">
+        <Icon name="FolderMinus" size="2xl" className="text-text-primary" />
+        <div className="flex w-full flex-col items-center gap-1 text-center text-sm leading-5">
+          <p className="font-medium text-text-primary">还没有项目</p>
+          <p className="text-text-hint">开始创建你的第一个项目吧</p>
+        </div>
+        <Button className="h-8 px-4" size="md" onClick={onCreateProject}>
+          新建项目
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function EmptyBillingResult() {
+  return (
+    <div className="flex min-w-0 items-center justify-center rounded-xl border border-dashed border-border-strong bg-bg-white/40 p-4">
+      <div className="flex w-80 flex-col items-center gap-4">
+        <Icon name="ReceiptText" size="2xl" className="text-text-primary" />
+        <div className="flex w-full flex-col items-center gap-1 text-center text-sm leading-5">
+          <p className="font-medium text-text-primary">暂无明细</p>
+          <p className="text-text-hint">有明细时会记录在此</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function EmptyMessageResult() {
   return (
     <div className="flex min-w-0 items-center justify-center rounded-xl border border-dashed border-border-strong bg-bg-white/40 p-4">
@@ -4394,13 +4498,17 @@ function ProjectCard({
 
 function ProjectList({
   projectsToShow,
+  isSearching,
   onChooseAgent,
+  onCreateProject,
   onRenameProject,
   onDeleteProject,
   onOpenProjectDetail,
 }: {
   projectsToShow: Project[];
+  isSearching: boolean;
   onChooseAgent: () => void;
+  onCreateProject: () => void;
   onRenameProject: (project: Project) => void;
   onDeleteProject: (project: Project) => void;
   onOpenProjectDetail: (project: Project) => void;
@@ -4421,7 +4529,11 @@ function ProjectList({
   }, [openProjectMenuId]);
 
   if (projectsToShow.length === 0) {
-    return <EmptySearchResult title="未找到项目" />;
+    return isSearching ? (
+      <EmptySearchResult title="未找到项目" />
+    ) : (
+      <EmptyProjectResult onCreateProject={onCreateProject} />
+    );
   }
 
   return (
@@ -5086,7 +5198,7 @@ function parseBillingDate(date: string) {
 }
 
 function getBillingSortValue(
-  item: (typeof billingDetails)[number],
+  item: MockBillingDetail,
   key: AccountDetailColumnKey,
 ) {
   if (key === 'date') {
@@ -5106,8 +5218,10 @@ function BillingSortIcon({
 
 function AccountDetailList({
   detailsToShow,
+  isSearching,
 }: {
-  detailsToShow: typeof billingDetails;
+  detailsToShow: MockBillingDetail[];
+  isSearching: boolean;
 }) {
   const [sortState, setSortState] = useState<AccountDetailSortState>(null);
   const sortedDetailsToShow = useMemo(() => {
@@ -5138,7 +5252,11 @@ function AccountDetailList({
   };
 
   if (detailsToShow.length === 0) {
-    return <EmptySearchResult title="未找到明细" />;
+    return isSearching ? (
+      <EmptySearchResult title="未找到明细" />
+    ) : (
+      <EmptyBillingResult />
+    );
   }
 
   return (
@@ -5190,8 +5308,10 @@ type ProductBillingColumnKey = (typeof productBillingColumns)[number]['key'];
 
 function ProductBillingList({
   detailsToShow,
+  isSearching,
 }: {
-  detailsToShow: ProductBillingDetail[];
+  detailsToShow: MockProductBillingDetail[];
+  isSearching: boolean;
 }) {
   const [sortDirection, setSortDirection] =
     useState<AccountDetailSortDirection | null>(null);
@@ -5225,7 +5345,11 @@ function ProductBillingList({
   };
 
   if (detailsToShow.length === 0) {
-    return <EmptySearchResult title="未找到明细" />;
+    return isSearching ? (
+      <EmptySearchResult title="未找到明细" />
+    ) : (
+      <EmptyBillingResult />
+    );
   }
 
   return (
@@ -5298,8 +5422,10 @@ type RequestBillingSortState = {
 
 function RequestBillingList({
   detailsToShow,
+  isSearching,
 }: {
-  detailsToShow: RequestBillingDetail[];
+  detailsToShow: MockRequestBillingDetail[];
+  isSearching: boolean;
 }) {
   const [sortState, setSortState] = useState<RequestBillingSortState>(null);
   const sortedDetailsToShow = useMemo(() => {
@@ -5332,7 +5458,11 @@ function RequestBillingList({
   };
 
   if (detailsToShow.length === 0) {
-    return <EmptySearchResult title="未找到明细" />;
+    return isSearching ? (
+      <EmptySearchResult title="未找到明细" />
+    ) : (
+      <EmptyBillingResult />
+    );
   }
 
   return (
@@ -5578,9 +5708,12 @@ export function HomePage() {
     useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
+  const [isMockDebugPanelOpen, setIsMockDebugPanelOpen] = useState(false);
   const [initialPolicyTab, setInitialPolicyTab] =
     useState<PolicyTab>('privacy');
-  const [projectItems, setProjectItems] = useState<Project[]>(() => projects);
+  const [projectItems, setProjectItems] = useState<Project[]>(() =>
+    getMockProjects(getCurrentMockUser(), projects),
+  );
   const [isCreateProjectModalOpen, setIsCreateProjectModalOpen] =
     useState(false);
   const [renamingProjectId, setRenamingProjectId] = useState<string | null>(
@@ -5660,13 +5793,23 @@ export function HomePage() {
         setProfileAvatarSrc(nextCurrentUser.avatarSrc);
         setProfileNickname(nextCurrentUser.nickname);
       }
+      setMessagesByMode(getMockMessages(nextCurrentUser));
+      setProjectItems(getMockProjects(nextCurrentUser, projects));
+      setAccountData(getMockAccountData(nextCurrentUser, seededAccountData));
+      setPendingReadMessageIds(new Set());
     }
 
     window.addEventListener(mockUserChangedEventName, syncCurrentUser);
+    window.addEventListener(mockMessagesChangedEventName, syncCurrentUser);
+    window.addEventListener(mockProjectsChangedEventName, syncCurrentUser);
+    window.addEventListener(mockAccountChangedEventName, syncCurrentUser);
     window.addEventListener('storage', syncCurrentUser);
 
     return () => {
       window.removeEventListener(mockUserChangedEventName, syncCurrentUser);
+      window.removeEventListener(mockMessagesChangedEventName, syncCurrentUser);
+      window.removeEventListener(mockProjectsChangedEventName, syncCurrentUser);
+      window.removeEventListener(mockAccountChangedEventName, syncCurrentUser);
       window.removeEventListener('storage', syncCurrentUser);
     };
   }, []);
@@ -5680,8 +5823,15 @@ export function HomePage() {
   }, [isProjectDetailMenuOpen]);
   const [shouldAnimateMessageCollapse, setShouldAnimateMessageCollapse] =
     useState(true);
-  const [unreadMessageIds, setUnreadMessageIds] = useState<Set<string>>(
-    () => new Set(allMessages.filter((message) => message.unread).map((message) => message.id)),
+  const [messagesByMode, setMessagesByMode] = useState<MockMessageByMode>(() =>
+    getMockMessages(getCurrentMockUser()),
+  );
+  const [accountData, setAccountData] = useState<MockAccountData>(() =>
+    getMockAccountData(getCurrentMockUser(), seededAccountData),
+  );
+  const unreadMessageIds = useMemo(
+    () => getUnreadMockMessageIds(messagesByMode),
+    [messagesByMode],
   );
   const [pendingReadMessageIds, setPendingReadMessageIds] = useState<Set<string>>(
     () => new Set(),
@@ -5690,18 +5840,13 @@ export function HomePage() {
   const pendingContentReflowRef = useRef(false);
   const filterStuckRef = useRef(false);
   const titleMenuVisibleRef = useRef(false);
+  const mockDebugLogoClickCountRef = useRef(0);
+  const mockDebugLogoClickTimerRef = useRef<number | null>(null);
   const messageAnimationFrameRef = useRef<number | null>(null);
   const normalizedSearchValue = searchValue.trim().toLowerCase();
   const messageUnreadCounts = useMemo(
-    () => ({
-      announcements: announcementMessages.filter((message) =>
-        unreadMessageIds.has(message.id),
-      ).length,
-      activity: activityMessages.filter((message) =>
-        unreadMessageIds.has(message.id),
-      ).length,
-    }),
-    [unreadMessageIds],
+    () => getMockMessageUnreadCounts(messagesByMode),
+    [messagesByMode],
   );
   const messageUnreadCount =
     messageUnreadCounts.announcements + messageUnreadCounts.activity;
@@ -5826,8 +5971,8 @@ export function HomePage() {
   });
   const filteredBillingDetails =
     normalizedSearchValue.length === 0
-      ? billingDetails
-      : billingDetails.filter((detail) => {
+      ? accountData.billingDetails
+      : accountData.billingDetails.filter((detail) => {
           const searchableText =
             `${detail.date} ${detail.amount} ${detail.originalAmount} ${detail.discount}`.toLowerCase();
 
@@ -5835,8 +5980,8 @@ export function HomePage() {
         });
   const filteredProductBillingDetails =
     normalizedSearchValue.length === 0
-      ? productBillingDetails
-      : productBillingDetails.filter((detail) => {
+      ? accountData.productBillingDetails
+      : accountData.productBillingDetails.filter((detail) => {
           const searchableText =
             `${detail.model} ${detail.type} ${detail.amount}`.toLowerCase();
 
@@ -5844,8 +5989,8 @@ export function HomePage() {
         });
   const filteredRequestBillingDetails =
     normalizedSearchValue.length === 0
-      ? requestBillingDetails
-      : requestBillingDetails.filter((detail) => {
+      ? accountData.requestBillingDetails
+      : accountData.requestBillingDetails.filter((detail) => {
           const searchableText =
             `${detail.model} ${detail.time} ${detail.apiKey} ${detail.tokens} ${detail.originalAmount} ${detail.amount}`.toLowerCase();
 
@@ -5941,6 +6086,10 @@ export function HomePage() {
     return () => {
       if (messageAnimationFrameRef.current !== null) {
         window.cancelAnimationFrame(messageAnimationFrameRef.current);
+      }
+
+      if (mockDebugLogoClickTimerRef.current !== null) {
+        window.clearTimeout(mockDebugLogoClickTimerRef.current);
       }
     };
   }, []);
@@ -6188,14 +6337,14 @@ export function HomePage() {
       items: [],
     };
 
-    setProjectItems((currentProjects) => [createdProject, ...currentProjects]);
+    updateProjectItems((currentProjects) => [createdProject, ...currentProjects]);
   }
 
   function handleRenameProject(projectId: string, projectName: string) {
     const projectTitle = projectName.trim();
     if (!projectTitle) return;
 
-    setProjectItems((currentProjects) =>
+    updateProjectItems((currentProjects) =>
       currentProjects.map((project) =>
         project.id === projectId
           ? {
@@ -6216,7 +6365,7 @@ export function HomePage() {
       handlePageChange('projects');
     }
 
-    setProjectItems((currentProjects) =>
+    updateProjectItems((currentProjects) =>
       currentProjects.filter((project) => project.id !== projectId),
     );
   }
@@ -6225,7 +6374,7 @@ export function HomePage() {
     const taskTitle = taskName.trim();
     if (!taskTitle || projectDetailId === null) return;
 
-    setProjectItems((currentProjects) =>
+    updateProjectItems((currentProjects) =>
       currentProjects.map((project) =>
         project.id === projectDetailId
           ? {
@@ -6244,7 +6393,7 @@ export function HomePage() {
   function handleDeleteProjectTask(taskKey: string) {
     if (projectDetailId === null) return;
 
-    setProjectItems((currentProjects) =>
+    updateProjectItems((currentProjects) =>
       currentProjects.map((project) => {
         if (project.id !== projectDetailId) {
           return project;
@@ -6342,13 +6491,7 @@ export function HomePage() {
         }));
       });
     }
-    setUnreadMessageIds((currentUnreadIds) => {
-      const nextUnreadIds = new Set(currentUnreadIds);
-
-      nextUnreadIds.delete(messageId);
-
-      return nextUnreadIds;
-    });
+    setMessagesByMode(markMockMessageRead(currentUser, targetMessageMode, messageId));
   }
 
   function handleOpenMarkAllReadModal(targetMessageMode: MessageMode) {
@@ -6370,6 +6513,24 @@ export function HomePage() {
     setIsRechargeModalOpen(true);
   }
 
+  function handleInvoiceClick() {
+    if (!isLoggedIn) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+
+    setIsInvoiceModalOpen(true);
+  }
+
+  function handleCreateProjectClick() {
+    if (!isLoggedIn) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+
+    setIsCreateProjectModalOpen(true);
+  }
+
   function handleNotificationMarkAllRead(targetMessageMode: MessageMode) {
     setIsNotificationPopoverOpen(false);
     handleOpenMarkAllReadModal(targetMessageMode);
@@ -6386,6 +6547,86 @@ export function HomePage() {
     window.requestAnimationFrame(() => {
       setIsProfileModalOpen(true);
     });
+  }
+
+  function applyMockUser(nextUser: MockUser | null) {
+    setCurrentUser(nextUser);
+    setMessagesByMode(getMockMessages(nextUser));
+    setProjectItems(getMockProjects(nextUser, projects));
+    setAccountData(getMockAccountData(nextUser, seededAccountData));
+    setPendingReadMessageIds(new Set());
+
+    if (nextUser !== null) {
+      setProfileAvatarSrc(nextUser.avatarSrc);
+      setProfileNickname(nextUser.nickname);
+    }
+  }
+
+  function updateProjectItems(
+    getNextProjects: (currentProjects: Project[]) => Project[],
+  ) {
+    setProjectItems((currentProjects) => {
+      const nextProjects = getNextProjects(currentProjects);
+
+      return saveCurrentMockProjects(currentUser, nextProjects);
+    });
+  }
+
+  function handleMockDebugLogoClick() {
+    if (!import.meta.env.DEV) return;
+
+    mockDebugLogoClickCountRef.current += 1;
+
+    if (mockDebugLogoClickTimerRef.current !== null) {
+      window.clearTimeout(mockDebugLogoClickTimerRef.current);
+    }
+
+    mockDebugLogoClickTimerRef.current = window.setTimeout(() => {
+      mockDebugLogoClickCountRef.current = 0;
+      mockDebugLogoClickTimerRef.current = null;
+    }, 1200);
+
+    if (mockDebugLogoClickCountRef.current < 3) return;
+
+    mockDebugLogoClickCountRef.current = 0;
+    if (mockDebugLogoClickTimerRef.current !== null) {
+      window.clearTimeout(mockDebugLogoClickTimerRef.current);
+      mockDebugLogoClickTimerRef.current = null;
+    }
+    setIsMockDebugPanelOpen(true);
+  }
+
+  function handleMockDebugLogin(phone: string) {
+    const nextUser = loginMockUser(phone);
+
+    applyMockUser(nextUser);
+  }
+
+  function handleMockDebugLogout() {
+    logoutMockUser();
+    applyMockUser(null);
+  }
+
+  function handleMockDebugResetMessages() {
+    setMessagesByMode(resetMockMessages(currentUser));
+    setPendingReadMessageIds(new Set());
+    resetExpandedMessages();
+  }
+
+  function handleMockDebugResetProjects() {
+    setProjectItems(resetMockProjects(currentUser, projects));
+    if (projectDetailId !== null) {
+      handlePageChange('projects');
+    }
+  }
+
+  function handleMockDebugResetAccount() {
+    setAccountData(resetMockAccountData(currentUser, seededAccountData));
+  }
+
+  function handleMockDebugPushMessage(targetMessageMode: MessageMode) {
+    setMessagesByMode(pushMockMessage(currentUser, targetMessageMode));
+    setPendingReadMessageIds(new Set());
   }
 
   function handleMessageToggle(messageId: string) {
@@ -6418,13 +6659,7 @@ export function HomePage() {
         });
       }
 
-      setUnreadMessageIds((currentUnreadIds) => {
-        const nextUnreadIds = new Set(currentUnreadIds);
-
-        nextUnreadIds.delete(messageId);
-
-        return nextUnreadIds;
-      });
+      setMessagesByMode(markMockMessageRead(currentUser, messageMode, messageId));
     }
   }
 
@@ -6448,6 +6683,7 @@ export function HomePage() {
         onPolicyClick={() => handleOpenPolicyModal('privacy')}
         onSupportClick={() => setIsSupportModalOpen(true)}
         onLogout={() => setIsLogoutConfirmModalOpen(true)}
+        onLogoClick={handleMockDebugLogoClick}
         onCollapsedMouseEnter={() => setShowCollapsedToggle(true)}
         onCollapsedMouseLeave={() => setShowCollapsedToggle(false)}
       />
@@ -6463,6 +6699,7 @@ export function HomePage() {
           onViewModeChange={handleViewModeChange}
           messageMode={messageMode}
           notificationMode={notificationMode}
+          messagesByMode={messagesByMode}
           messageUnreadCount={visibleMessageUnreadCount}
           messageUnreadCounts={visibleMessageUnreadCounts}
           onMessageModeChange={handleMessageModeChange}
@@ -6541,11 +6778,12 @@ export function HomePage() {
                 onActiveTabChange={handleActiveTabChange}
                 searchValue={searchValue}
                 onSearchValueChange={handleSearchValueChange}
-                onInvoiceClick={() => setIsInvoiceModalOpen(true)}
+                onInvoiceClick={handleInvoiceClick}
                 onRechargeClick={handleRechargeClick}
+                accountStatsToShow={accountData.stats}
                 onMarkAllReadClick={() => handleOpenMarkAllReadModal(messageMode)}
                 canMarkAllRead={canMarkAllRead}
-                onCreateProjectClick={() => setIsCreateProjectModalOpen(true)}
+                onCreateProjectClick={handleCreateProjectClick}
               />
               <div className="home-sticky-spacer" aria-hidden="true" />
               <div className="home-results-scroll">
@@ -6553,18 +6791,29 @@ export function HomePage() {
                   {activePage === 'projects' ? (
                     <ProjectList
                       projectsToShow={filteredProjects}
+                      isSearching={searchValue.trim().length > 0}
                       onChooseAgent={() => handlePageChange('home')}
+                      onCreateProject={handleCreateProjectClick}
                       onRenameProject={(project) => setRenamingProjectId(project.id)}
                       onDeleteProject={(project) => setDeletingProjectId(project.id)}
                       onOpenProjectDetail={handleOpenProjectDetail}
                     />
                   ) : activePage === 'account' ? (
                     activeTab === '产品账单' ? (
-                      <ProductBillingList detailsToShow={filteredProductBillingDetails} />
+                      <ProductBillingList
+                        detailsToShow={filteredProductBillingDetails}
+                        isSearching={searchValue.trim().length > 0}
+                      />
                     ) : activeTab === '请求明细' ? (
-                      <RequestBillingList detailsToShow={filteredRequestBillingDetails} />
+                      <RequestBillingList
+                        detailsToShow={filteredRequestBillingDetails}
+                        isSearching={searchValue.trim().length > 0}
+                      />
                     ) : (
-                      <AccountDetailList detailsToShow={filteredBillingDetails} />
+                      <AccountDetailList
+                        detailsToShow={filteredBillingDetails}
+                        isSearching={searchValue.trim().length > 0}
+                      />
                     )
                   ) : activePage === 'messages' ? (
                     <MessageList
@@ -6606,9 +6855,7 @@ export function HomePage() {
           onLogin={(phone) => {
             const nextCurrentUser = loginMockUser(phone);
 
-            setCurrentUser(nextCurrentUser);
-            setProfileAvatarSrc(nextCurrentUser.avatarSrc);
-            setProfileNickname(nextCurrentUser.nickname);
+            applyMockUser(nextCurrentUser);
           }}
           onPrivacyClick={() => handleOpenPolicyModal('privacy')}
           onTermsClick={() => handleOpenPolicyModal('agreement')}
@@ -6618,19 +6865,7 @@ export function HomePage() {
         <MarkAllReadModal
           onClose={() => setIsMarkAllReadModalOpen(false)}
           onConfirm={() => {
-            const targetMessageIds = new Set(
-              messagesByMode[markAllReadTargetMode].map((message) => message.id),
-            );
-
-            setUnreadMessageIds((currentUnreadIds) => {
-              const nextUnreadIds = new Set(currentUnreadIds);
-
-              targetMessageIds.forEach((messageId) => {
-                nextUnreadIds.delete(messageId);
-              });
-
-              return nextUnreadIds;
-            });
+            setMessagesByMode(markAllMockMessagesRead(currentUser, markAllReadTargetMode));
             setPendingReadMessageIds(new Set());
           }}
         />
@@ -6638,7 +6873,24 @@ export function HomePage() {
       {isLogoutConfirmModalOpen && (
         <LogoutConfirmModal
           onClose={() => setIsLogoutConfirmModalOpen(false)}
-          onConfirm={logoutMockUser}
+          onConfirm={() => {
+            logoutMockUser();
+            applyMockUser(null);
+          }}
+        />
+      )}
+      {import.meta.env.DEV && isMockDebugPanelOpen && (
+        <MockDebugPanel
+          currentUser={currentUser}
+          onClose={() => setIsMockDebugPanelOpen(false)}
+          onLoginWithData={() => handleMockDebugLogin('18888888888')}
+          onLoginEmptyData={() => handleMockDebugLogin('16666666666')}
+          onLogout={handleMockDebugLogout}
+          onResetMessages={handleMockDebugResetMessages}
+          onResetProjects={handleMockDebugResetProjects}
+          onResetAccount={handleMockDebugResetAccount}
+          onPushAnnouncement={() => handleMockDebugPushMessage('announcements')}
+          onPushActivity={() => handleMockDebugPushMessage('activity')}
         />
       )}
       {isProfileModalOpen && (
