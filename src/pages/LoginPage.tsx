@@ -1,7 +1,8 @@
-import type { FormEvent, ReactNode, Ref } from 'react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import type { FormEvent, ReactNode, RefObject } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '../components/ui/Button';
-import { Icon } from '../components/ui/Icon';
+import { InputField } from '../components/ui/Input';
+import { FeatureModal } from '../components/ui/Modal';
 
 const phonePattern = /^1[3-9]\d{9}$/;
 type LoginErrorField = 'phone' | 'code' | null;
@@ -43,73 +44,30 @@ function LoginInput({
   clearable?: boolean;
   action?: ReactNode;
   error?: boolean;
-  inputRef?: Ref<HTMLInputElement>;
+  inputRef?: RefObject<HTMLInputElement>;
   onClear?: () => void;
   onChange: (value: string) => void;
 }) {
   return (
-    <label
-      className={[
-        'flex h-10 w-full items-center gap-2 rounded-button px-4 py-2.5 transition-shadow',
-        error
-          ? 'shadow-[inset_0_0_0_1px_#FF5C4D]'
-          : disabled
-            ? 'shadow-border-subtle'
-            : readOnly
-              ? 'shadow-border-strong'
-              : 'shadow-border-strong focus-within:shadow-border-selected',
-      ].join(' ')}
-      htmlFor={id}
-      onMouseDown={(event) => {
-        if (!readOnly) return;
-
-        const target = event.target as HTMLElement | null;
-        if (target?.closest('button:not(:disabled)')) return;
-
-        event.preventDefault();
-      }}
-    >
-      <img className="h-4 w-4 shrink-0" src={iconSrc} alt="" />
-      <input
-        id={id}
-        className="min-w-0 flex-1 bg-transparent text-sm leading-5 text-text-primary outline-none placeholder:text-text-placeholder disabled:text-text-disabled disabled:placeholder:text-text-disabled"
-        type="text"
-        inputMode={inputMode}
-        ref={inputRef}
-        value={value}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        disabled={disabled}
-        readOnly={readOnly}
-        tabIndex={readOnly ? -1 : undefined}
-        onFocus={(event) => {
-          if (readOnly) {
-            event.currentTarget.blur();
-          }
-        }}
-        onChange={(event) => onChange(event.target.value.replace(/\D/g, ''))}
-      />
-      {clearable && value.length > 0 && !disabled && (
-        <button
-          className="ml-2 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-pill bg-text-hint text-text-inverse hover:bg-text-secondary active:bg-text-primary"
-          type="button"
-          aria-label="清空手机号"
-          onMouseDown={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-          }}
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            onClear?.();
-            onChange('');
-          }}
-        >
-          <Icon name="X" size="xs" />
-        </button>
-      )}
-      {action}
-    </label>
+    <InputField
+      id={id}
+      ref={inputRef}
+      className="w-full"
+      value={value}
+      placeholder={placeholder}
+      inputMode={inputMode}
+      maxLength={maxLength}
+      disabled={disabled}
+      readOnly={readOnly}
+      prefixAsset={iconSrc}
+      clearable={clearable}
+      clearLabel="清空手机号"
+      suffix={action}
+      error={error}
+      transformValue={(nextValue) => nextValue.replace(/\D/g, '')}
+      onClear={onClear}
+      onValueChange={onChange}
+    />
   );
 }
 
@@ -212,10 +170,10 @@ function LoginCard({ onLogin, onPrivacyClick, onTermsClick }: LoginPageProps) {
               <img className="h-[18px] w-[18px]" src="/assets/login/logo.svg" alt="" />
             </span>
             <span className="font-logo text-xl leading-none tracking-normal">
-              Hello<span className="text-accent-successBorder">me</span>
+              Hello<span className="text-accent-green">me</span>
             </span>
           </div>
-          <p className="relative min-w-0 flex-1 truncate text-right text-xs leading-4 text-accent-successBorder">
+          <p className="relative min-w-0 flex-1 truncate text-right text-xs leading-4 text-accent-green">
             国内交互应用智能体平台创新引领者
           </p>
         </header>
@@ -241,11 +199,6 @@ function LoginCard({ onLogin, onPrivacyClick, onTermsClick }: LoginPageProps) {
                   clearable
                   inputRef={phoneInputRef}
                   onClear={() => {
-                    if (document.activeElement instanceof HTMLElement) {
-                      document.activeElement.blur();
-                    }
-                    phoneInputRef.current?.blur();
-                    codeInputRef.current?.blur();
                     setIsCodeInputUnlocked(false);
                   }}
                   onChange={(nextPhone) => {
@@ -311,7 +264,7 @@ function LoginCard({ onLogin, onPrivacyClick, onTermsClick }: LoginPageProps) {
           </section>
         </div>
 
-        <footer className="flex h-[72px] shrink-0 items-start justify-center border-t border-border-subtle bg-[#FCFCFC] px-4 pb-6 pt-4">
+        <footer className="flex h-[72px] shrink-0 items-start justify-center border-t border-border-subtle bg-bg-soft px-4 pb-6 pt-4">
           <p className="w-[320px] text-center text-xs leading-4 text-text-secondary">
             阅读并同意
             <button
@@ -342,83 +295,26 @@ export function LoginModal({
   onPrivacyClick,
   onTermsClick,
 }: LoginModalProps) {
-  const [isVisible, setIsVisible] = useState(false);
-  const closeTimerRef = useRef<number | null>(null);
-  const onCloseRef = useRef(onClose);
-
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-
-  const closeWithAnimation = useCallback(() => {
-    setIsVisible(false);
-
-    if (closeTimerRef.current !== null) {
-      window.clearTimeout(closeTimerRef.current);
-    }
-
-    closeTimerRef.current = window.setTimeout(() => {
-      onCloseRef.current();
-    }, 180);
-  }, []);
-
-  useEffect(() => {
-    const animationFrame = window.requestAnimationFrame(() => {
-      setIsVisible(true);
-    });
-
-    return () => {
-      window.cancelAnimationFrame(animationFrame);
-    };
-  }, []);
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        closeWithAnimation();
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-
-      if (closeTimerRef.current !== null) {
-        window.clearTimeout(closeTimerRef.current);
-      }
-    };
-  }, [closeWithAnimation]);
-
   return (
-    <div
-      className={[
-        'fixed inset-0 z-50 flex items-center justify-center bg-bg-black/60 p-6 text-text-primary transition-opacity duration-200 ease-out',
-        isVisible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
-      ].join(' ')}
-      role="presentation"
-      onClick={closeWithAnimation}
+    <FeatureModal
+      ariaLabel="登录"
+      showCloseButton={false}
+      bodyPadding={false}
+      panelClassName="rounded-card bg-transparent shadow-none"
+      bodyClassName="text-text-primary"
+      onClose={onClose}
     >
-      <div
-        className={[
-          'transition-all duration-200 ease-out',
-          isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
-        ].join(' ')}
-        role="dialog"
-        aria-modal="true"
-        aria-label="登录"
-        onClick={(event) => event.stopPropagation()}
-      >
+      {({ close }) => (
         <LoginCard
           onPrivacyClick={onPrivacyClick}
           onTermsClick={onTermsClick}
           onLogin={(phone) => {
             onLogin(phone);
-            closeWithAnimation();
+            close();
           }}
         />
-      </div>
-    </div>
+      )}
+    </FeatureModal>
   );
 }
 

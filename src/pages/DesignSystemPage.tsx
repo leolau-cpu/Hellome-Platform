@@ -1,13 +1,48 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Button, ButtonLink } from '../components/ui/Button';
+import {
+  Button,
+  IconButton,
+  TextLink,
+  ToolbarIconButton,
+} from '../components/ui/Button';
 import { Icon } from '../components/ui/Icon';
+import { CounterInput, InputField } from '../components/ui/Input';
+import {
+  ConfirmModal,
+  ContentModal,
+  FeatureModal,
+  FormModal,
+  InfoModal,
+  WorkflowModal,
+} from '../components/ui/Modal';
+import {
+  Popover,
+  PopoverMenu,
+  PopoverPanel,
+  PopoverDivider,
+  PopoverEmpty,
+  PopoverHeader,
+  PopoverItem,
+  PopoverSearch,
+  PopoverSection,
+  PopoverOptions,
+} from '../components/ui/Popover';
 import { SearchInput } from '../components/ui/SearchInput';
 import { TabBar } from '../components/ui/TabBar';
 import { TabButton } from '../components/ui/TabButton';
 
 const buttonVariants = ['primary', 'secondary', 'text', 'warning', 'notice'] as const;
 const buttonSizes = ['xl', 'lg', 'md', 'sm', 'xs'] as const;
+const popoverPanelPreviewOptions = [
+  { label: '选项一', src: '/assets/home/workflows/cover-1.png' },
+  { label: '选项二', src: '/assets/home/workflows/cover-2.png' },
+  { label: '选项三', src: '/assets/home/workflows/cover-3.png' },
+  { label: '选项四', src: '/assets/home/workflows/cover-4.png' },
+  { label: '选项五', src: '/assets/home/workflows/cover-5.png' },
+  { label: '选项六', src: '/assets/home/workflows/cover-6.png' },
+] as const;
+type PopoverPanelPreviewOption = (typeof popoverPanelPreviewOptions)[number];
 const tabItems = [
   { value: 'filter-1', label: '筛选按钮' },
   { value: 'filter-2', label: '筛选按钮' },
@@ -29,46 +64,69 @@ const overflowTabItems = [
   { value: 'filter-12', label: '筛选按钮' },
 ];
 const iconSizes = ['xs', 'sm', 'md', 'lg', 'xl', '2xl'] as const;
+const designWeekLabels = ['日', '一', '二', '三', '四', '五', '六'] as const;
+const notificationPreviewTabs = [
+  { value: 'announcements', label: '公告', badge: 3 },
+  { value: 'activity', label: '动态', badge: 0 },
+] as const;
+type NotificationPreviewTab = (typeof notificationPreviewTabs)[number]['value'];
+const notificationPreviewMessages = [
+  { title: '系统通知', time: '刚刚', unread: true },
+  { title: '活动消息', time: '10:24', unread: true },
+  { title: '功能更新提醒', time: '昨天', unread: false },
+] as const;
+type ActiveModalPreview =
+  | 'info'
+  | 'confirm'
+  | 'form'
+  | 'feature'
+  | 'content'
+  | 'workflow'
+  | null;
 const colorGroups = [
   {
     title: 'Text',
     items: [
-      { token: 'text.primary', className: 'bg-text-primary' },
-      { token: 'text.secondary', className: 'bg-text-secondary' },
-      { token: 'text.hint', className: 'bg-text-hint' },
-      { token: 'text.placeholder', className: 'bg-text-placeholder' },
-      { token: 'text.disabled', className: 'bg-text-disabled' },
-      { token: 'text.inverse', className: 'bg-text-inverse shadow-border-strong' },
+      { token: 'text.primary', value: '000000', className: 'bg-text-primary' },
+      { token: 'text.secondary', value: '666666', className: 'bg-text-secondary' },
+      { token: 'text.hint', value: '999999', className: 'bg-text-hint' },
+      { token: 'text.placeholder', value: 'B3B3B3', className: 'bg-text-placeholder' },
+      { token: 'text.disabled', value: 'CCCCCC', className: 'bg-text-disabled' },
+      { token: 'text.inverse', value: 'FFFFFF', className: 'bg-text-inverse' },
+      { token: 'text.danger', value: 'D94E41', className: 'bg-text-danger' },
+      { token: 'text.warning', value: 'D97C25', className: 'bg-text-warning' },
+      { token: 'text.success', value: '219B5A', className: 'bg-text-success' },
+      { token: 'text.info', value: '0074D9', className: 'bg-text-info' },
     ],
   },
   {
     title: 'Background',
     items: [
-      { token: 'bg.white', className: 'bg-bg-white shadow-border-strong' },
-      { token: 'bg.soft', className: 'bg-bg-soft' },
-      { token: 'bg.medium', className: 'bg-bg-medium' },
-      { token: 'bg.strong', className: 'bg-bg-strong' },
-      { token: 'bg.black', className: 'bg-bg-black' },
+      { token: 'bg.white', value: 'FFFFFF', className: 'bg-bg-white' },
+      { token: 'bg.soft', value: 'F9F9F9', className: 'bg-bg-soft' },
+      { token: 'bg.medium', value: 'F3F3F3', className: 'bg-bg-medium' },
+      { token: 'bg.strong', value: 'EAEAEA', className: 'bg-bg-strong' },
+      { token: 'bg.black', value: '000000', className: 'bg-bg-black' },
     ],
   },
   {
     title: 'Border',
     items: [
-      { token: 'border.subtle', className: 'bg-border-subtle' },
-      { token: 'border.default', className: 'bg-border-default' },
-      { token: 'border.strong', className: 'bg-border-strong' },
-      { token: 'border.hover', className: 'bg-border-hover' },
-      { token: 'border.selected', className: 'bg-border-selected' },
+      { token: 'border.subtle', value: 'F3F3F3', className: 'bg-border-subtle' },
+      { token: 'border.default', value: 'EAEAEA', className: 'bg-border-default' },
+      { token: 'border.strong', value: 'E5E5E5', className: 'bg-border-strong' },
+      { token: 'border.hover', value: 'B3B3B3', className: 'bg-border-hover' },
+      { token: 'border.selected', value: '000000', className: 'bg-border-selected' },
     ],
   },
   {
     title: 'Accent',
     items: [
-      { token: 'accent.orange', className: 'bg-accent-orange' },
-      { token: 'accent.red', className: 'bg-accent-red' },
-      { token: 'accent.teal', className: 'bg-accent-teal' },
-      { token: 'accent.green', className: 'bg-accent-green' },
-      { token: 'accent.toolbar', className: 'bg-accent-toolbar' },
+      { token: 'accent.red', value: 'FF5C4D', className: 'bg-accent-red' },
+      { token: 'accent.orange', value: 'FF922B', className: 'bg-accent-orange' },
+      { token: 'accent.green', value: '27B66A', className: 'bg-accent-green' },
+      { token: 'accent.blue', value: '0088FF', className: 'bg-accent-blue' },
+      { token: 'accent.teal', value: '146666', className: 'bg-accent-teal' },
     ],
   },
 ] as const;
@@ -129,16 +187,300 @@ function Row({
   children: ReactNode;
 }) {
   return (
-    <div className="grid gap-3 border-t border-border-subtle py-4 first:border-t-0 first:pt-0 last:pb-0 md:grid-cols-[140px_1fr]">
-      <div className="text-sm text-text-secondary">{label}</div>
+    <div className="grid items-center gap-3 border-t border-border-subtle py-4 first:border-t-0 first:pt-0 last:pb-0 md:grid-cols-[140px_1fr]">
+      <div className="flex min-h-8 items-center text-sm text-text-secondary">{label}</div>
       <div className="flex min-w-0 flex-wrap items-center gap-3">{children}</div>
     </div>
+  );
+}
+
+function addPreviewMonths(date: Date, offset: number) {
+  return new Date(date.getFullYear(), date.getMonth() + offset, 1);
+}
+
+function createDatePickerPreviewCells(visibleMonth: Date) {
+  const year = visibleMonth.getFullYear();
+  const month = visibleMonth.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstWeekday = new Date(year, month, 1).getDay();
+
+  return [
+    ...Array.from({ length: firstWeekday }, (_, index) => ({
+      key: `empty-${index}`,
+      day: null,
+    })),
+    ...Array.from({ length: daysInMonth }, (_, index) => ({
+      key: `day-${index + 1}`,
+      day: index + 1,
+    })),
+  ];
+}
+
+function DatePickerPopoverPreview({
+  selectedDay,
+  visibleMonth,
+  onSelectedDayChange,
+  onVisibleMonthChange,
+}: {
+  selectedDay: number;
+  visibleMonth: Date;
+  onSelectedDayChange: (day: number) => void;
+  onVisibleMonthChange: (date: Date) => void;
+}) {
+  const year = visibleMonth.getFullYear();
+  const month = visibleMonth.getMonth();
+  const datePickerPreviewCells = createDatePickerPreviewCells(visibleMonth);
+
+  return (
+    <Popover
+      position="static"
+      width={280}
+      padding="none"
+      constrainHeight={false}
+      className="p-3"
+      role="dialog"
+      aria-label="日期选择浮窗示例"
+    >
+      <div className="flex h-10 items-center justify-between">
+        <div className="flex h-10 w-10 items-center justify-center">
+          <IconButton
+            name="ArrowLeft"
+            variant="text"
+            size="md"
+            aria-label="上个月"
+            onClick={() => onVisibleMonthChange(addPreviewMonths(visibleMonth, -1))}
+          />
+        </div>
+        <div className="flex h-10 w-40 items-center justify-center text-sm font-medium leading-5 text-text-primary">
+          {year}年{month + 1}月
+        </div>
+        <div className="flex h-10 w-10 items-center justify-center">
+          <IconButton
+            name="ArrowRight"
+            variant="text"
+            size="md"
+            aria-label="下个月"
+            onClick={() => onVisibleMonthChange(addPreviewMonths(visibleMonth, 1))}
+          />
+        </div>
+      </div>
+      <div className="flex h-4 items-center px-1">
+        <div className="h-px w-full bg-border-subtle" />
+      </div>
+      <div className="grid w-full grid-cols-[repeat(7,32px)] auto-rows-[32px] gap-1 px-1 py-1">
+        {designWeekLabels.map((label) => (
+          <div
+            key={label}
+            className="flex h-8 w-8 items-center justify-center text-sm font-medium leading-5 text-text-hint"
+          >
+            {label}
+          </div>
+        ))}
+        {datePickerPreviewCells.map((cell) => {
+          const day = cell.day;
+          const isSelected = day === selectedDay;
+
+          return (
+            <div
+              key={cell.key}
+              className="flex h-8 w-8 items-center justify-center"
+            >
+              {day !== null && (
+                <button
+                  className={[
+                    'flex h-8 w-8 items-center justify-center rounded-button text-sm font-medium leading-5',
+                    isSelected
+                      ? 'bg-bg-black text-text-inverse'
+                      : 'text-text-primary hover:bg-bg-soft active:bg-bg-medium',
+                  ].join(' ')}
+                  type="button"
+                  onClick={() => onSelectedDayChange(day)}
+                >
+                  {day}
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </Popover>
+  );
+}
+
+function NotificationPopoverPreview({
+  activeTab,
+  onActiveTabChange,
+}: {
+  activeTab: NotificationPreviewTab;
+  onActiveTabChange: (tab: NotificationPreviewTab) => void;
+}) {
+  const messagesToShow =
+    activeTab === 'announcements' ? notificationPreviewMessages : [];
+
+  return (
+    <Popover
+      position="static"
+      width={400}
+      constrainHeight={false}
+      className="flex min-h-[196px] flex-col"
+      role="dialog"
+      aria-label="消息通知浮窗示例"
+    >
+      <div className="flex h-9 w-full items-center px-4">
+        <div className="flex h-9 w-full items-center gap-4">
+          {notificationPreviewTabs.map((tab) => {
+            const isActive = tab.value === activeTab;
+
+            return (
+              <button
+                key={tab.value}
+                className={[
+                  'flex h-9 items-center gap-1 text-sm leading-5',
+                  isActive
+                    ? 'font-medium text-text-primary'
+                    : 'font-normal text-text-hint hover:text-text-secondary active:text-text-primary',
+                ].join(' ')}
+                type="button"
+                onClick={() => onActiveTabChange(tab.value)}
+              >
+                <span>{tab.label}</span>
+                {tab.badge > 0 && (
+                  <span className="flex h-4 min-w-4 items-center justify-center rounded-pill bg-accent-red px-1 text-xs leading-4 text-text-inverse">
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="flex h-4 items-center px-4">
+        <div className="h-px w-full bg-border-subtle" />
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col">
+        {messagesToShow.length === 0 ? (
+          <div className="flex h-[110px] items-center justify-center px-4 text-sm leading-5 text-text-hint">
+            <span className="flex items-center gap-2">
+              <Icon name="MailOpen" className="shrink-0" />
+              <span>暂无消息</span>
+            </span>
+          </div>
+        ) : (
+          messagesToShow.map((message) => (
+            <button
+              key={message.title}
+              className="group flex h-10 w-full items-center px-2 text-left"
+              type="button"
+            >
+              <span className="flex h-9 min-w-0 flex-1 items-center rounded-button px-2 hover:bg-bg-soft active:bg-bg-medium">
+                <span
+                  className={[
+                    'h-1.5 w-1.5 shrink-0 rounded-pill',
+                    message.unread ? 'bg-accent-red' : 'bg-bg-strong',
+                  ].join(' ')}
+                />
+                <span
+                  className={[
+                    'ml-2 min-w-0 flex-1 truncate text-sm leading-5 text-text-primary',
+                    message.unread ? 'font-medium' : 'font-normal',
+                  ].join(' ')}
+                >
+                  {message.title}
+                </span>
+                <time className="ml-2 shrink-0 text-xs leading-4 text-text-hint group-hover:hidden">
+                  {message.time}
+                </time>
+                <Icon
+                  name="ChevronRight"
+                  className="ml-2 hidden shrink-0 text-text-secondary group-hover:block"
+                />
+              </span>
+            </button>
+          ))
+        )}
+      </div>
+      <div className="flex h-3 items-center px-4">
+        <div className="h-px w-full bg-border-subtle" />
+      </div>
+      <div className="flex h-9 items-center px-4">
+        <div className="flex h-9 w-full items-center justify-between">
+          <button
+            className="h-5 rounded-button text-sm leading-5 text-text-secondary hover:text-text-primary active:text-text-primary"
+            type="button"
+          >
+            全部已读
+          </button>
+          <button
+            className="group flex h-5 items-center rounded-button text-sm leading-5 text-text-secondary hover:text-text-primary active:text-text-primary"
+            type="button"
+          >
+            <span>全部消息</span>
+            <Icon
+              name="ChevronRight"
+              className="text-text-secondary group-hover:text-text-primary group-active:text-text-primary"
+            />
+          </button>
+        </div>
+      </div>
+    </Popover>
   );
 }
 
 export function DesignSystemPage() {
   const [activeTabButton, setActiveTabButton] = useState(tabItems[0].value);
   const [activeTabBar, setActiveTabBar] = useState(overflowTabItems[0].value);
+  const [activeModalPreview, setActiveModalPreview] =
+    useState<ActiveModalPreview>(null);
+  const [modalFormName, setModalFormName] = useState('示例项目');
+  const [popoverSearchValue, setPopoverSearchValue] = useState('');
+  const [selectedPopoverOption, setSelectedPopoverOption] = useState('选项一');
+  const [selectedPopoverPanelOption, setSelectedPopoverPanelOption] =
+    useState('选项一');
+  const [selectedDatePreviewDay, setSelectedDatePreviewDay] = useState(28);
+  const [visibleDatePreviewMonth, setVisibleDatePreviewMonth] = useState(
+    () => new Date(2026, 6, 1),
+  );
+  const [activeNotificationPreviewTab, setActiveNotificationPreviewTab] =
+    useState<NotificationPreviewTab>('announcements');
+  const popoverPanelPreviewRef = useRef<HTMLDivElement | null>(null);
+  const [popoverPanelEmptyHeight, setPopoverPanelEmptyHeight] =
+    useState<number | null>(null);
+  const normalizedPopoverSearchValue = popoverSearchValue.trim().toLowerCase();
+  const filterPopoverOptions = (options: readonly PopoverPanelPreviewOption[]) =>
+    normalizedPopoverSearchValue
+      ? options.filter((option) =>
+          option.label.toLowerCase().includes(normalizedPopoverSearchValue),
+        )
+      : options;
+  const firstPopoverPanelOptions = filterPopoverOptions(
+    popoverPanelPreviewOptions.slice(0, 2),
+  );
+  const secondPopoverPanelOptions = filterPopoverOptions(
+    popoverPanelPreviewOptions.slice(2, 5),
+  );
+  const hasPopoverSearchValue = normalizedPopoverSearchValue.length > 0;
+  const hasPopoverPanelResults =
+    firstPopoverPanelOptions.length > 0 || secondPopoverPanelOptions.length > 0;
+
+  useLayoutEffect(() => {
+    if (hasPopoverSearchValue && !hasPopoverPanelResults) {
+      return;
+    }
+
+    const popoverPanelElement = popoverPanelPreviewRef.current;
+
+    if (!popoverPanelElement) {
+      return;
+    }
+
+    const nextHeight = Math.ceil(
+      popoverPanelElement.getBoundingClientRect().height,
+    );
+
+    setPopoverPanelEmptyHeight((currentHeight) =>
+      currentHeight === nextHeight ? currentHeight : nextHeight,
+    );
+  }, [hasPopoverPanelResults, hasPopoverSearchValue, popoverSearchValue]);
 
   return (
     <main className="min-h-screen bg-bg-soft px-12 py-10 text-text-primary">
@@ -170,11 +512,16 @@ export function DesignSystemPage() {
                   {group.items.map((item) => (
                     <div
                       key={item.token}
-                      className="overflow-hidden rounded-button bg-bg-white shadow-border-strong"
+                      className="overflow-hidden rounded-button border border-border-strong bg-bg-white"
                     >
-                      <div className={`h-16 ${item.className}`} />
-                      <div className="p-3 text-sm text-text-secondary">
-                        {item.token}
+                      <div className={`h-16 border-b border-border-subtle ${item.className}`} />
+                      <div className="flex items-center justify-between gap-3 p-3 text-sm">
+                        <span className="min-w-0 truncate text-text-secondary">
+                          {item.token}
+                        </span>
+                        <span className="shrink-0 text-text-hint">
+                          {item.value}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -208,6 +555,51 @@ export function DesignSystemPage() {
 
         <Section
           index="03"
+          name="TextLink"
+          title="文字链接"
+          description="TextLink 用于正文、列表和说明区域中的链接入口。文字链接不复用按钮尺寸，不使用填充和描边，只通过 tone 控制文字颜色。"
+        >
+          <div className="flex flex-wrap items-center gap-3">
+            <TextLink
+              href="#preview"
+              tone="black"
+              onClick={(event) => event.preventDefault()}
+            >
+              黑字链接
+            </TextLink>
+            <TextLink
+              href="#preview"
+              tone="red"
+              onClick={(event) => event.preventDefault()}
+            >
+              红字链接
+            </TextLink>
+            <TextLink
+              href="#preview"
+              tone="yellow"
+              onClick={(event) => event.preventDefault()}
+            >
+              黄字链接
+            </TextLink>
+            <TextLink
+              href="#preview"
+              tone="green"
+              onClick={(event) => event.preventDefault()}
+            >
+              绿字链接
+            </TextLink>
+            <TextLink
+              href="#preview"
+              tone="blue"
+              onClick={(event) => event.preventDefault()}
+            >
+              蓝字链接
+            </TextLink>
+          </div>
+        </Section>
+
+        <Section
+          index="04"
           name="Button"
           title="按钮"
           description="Button 用于触发页面操作。当前封装包含 variant、size、surface、selected、disabled 和 loading；线框按钮和文字按钮通过 surface 适配白底与灰底的 hover / active 反馈。"
@@ -216,10 +608,7 @@ export function DesignSystemPage() {
             {buttonVariants.map((variant) => (
               <Row key={variant} label={`variant: ${variant}`}>
                 <Button variant={variant}>默认按钮</Button>
-                <Button variant={variant}>
-                  <Icon name="Plus" className="mr-1" />
-                  带图标
-                </Button>
+                <Button variant={variant} icon="Plus">带图标</Button>
                 <Button variant={variant} disabled>
                   禁用按钮
                 </Button>
@@ -252,11 +641,53 @@ export function DesignSystemPage() {
                 </Button>
               </div>
             </Row>
+            <Row label="shape: pill">
+              <Button shape="pill">全圆角按钮</Button>
+              <Button variant="secondary" shape="pill">
+                全圆角线框
+              </Button>
+              <Button variant="notice" shape="pill">
+                全圆角提示
+              </Button>
+            </Row>
+            <Row label="IconButton">
+              <IconButton name="Plus" aria-label="新增" />
+              <IconButton
+                name="Search"
+                variant="secondary"
+                aria-label="搜索"
+              />
+              <IconButton
+                name="Settings"
+                variant="text"
+                aria-label="设置"
+              />
+              <IconButton
+                name="Trash"
+                variant="warning"
+                aria-label="删除"
+              />
+              <IconButton
+                name="Plus"
+                shape="pill"
+                aria-label="新增"
+              />
+            </Row>
+            <Row label="ToolbarIconButton">
+              <div className="flex items-center gap-2">
+                <ToolbarIconButton name="ListFilter" tone="secondary" aria-label="次要色筛选" />
+                <span className="text-xs leading-4 text-text-hint">secondary</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <ToolbarIconButton name="Ellipsis" tone="hint" aria-label="提示色更多" />
+                <span className="text-xs leading-4 text-text-hint">hint</span>
+              </div>
+            </Row>
           </div>
         </Section>
 
         <Section
-          index="04"
+          index="05"
           name="Button Size"
           title="按钮尺寸"
           description="Button size 控制按钮高度、内边距与文本层级。页面实现时优先选择既有 size，不在页面内临时写高度或字号。"
@@ -265,6 +696,9 @@ export function DesignSystemPage() {
             {buttonSizes.map((size) => (
               <Row key={size} label={`size: ${size}`}>
                 <Button size={size}>主按钮</Button>
+                <Button size={size} icon="Plus">
+                  带图标
+                </Button>
                 <Button variant="secondary" size={size}>
                   辅助按钮
                 </Button>
@@ -273,44 +707,17 @@ export function DesignSystemPage() {
                 </Button>
               </Row>
             ))}
-          </div>
-        </Section>
-
-        <Section
-          index="05"
-          name="ButtonLink"
-          title="链接型按钮"
-          description="ButtonLink 用于需要链接语义的操作入口。链接按钮不使用填充和描边，只通过 tone 控制文字颜色。"
-        >
-          <div className="flex flex-wrap items-center gap-3">
-            <ButtonLink
-              href="#preview"
-              tone="black"
-              onClick={(event) => event.preventDefault()}
-            >
-              黑字链接
-            </ButtonLink>
-            <ButtonLink
-              href="#preview"
-              tone="red"
-              onClick={(event) => event.preventDefault()}
-            >
-              红字链接
-            </ButtonLink>
-            <ButtonLink
-              href="#preview"
-              tone="yellow"
-              onClick={(event) => event.preventDefault()}
-            >
-              黄字链接
-            </ButtonLink>
-            <ButtonLink
-              href="#preview"
-              tone="green"
-              onClick={(event) => event.preventDefault()}
-            >
-              绿字链接
-            </ButtonLink>
+            <Row label="IconButton size">
+              {buttonSizes.map((size) => (
+                <IconButton
+                  key={size}
+                  name="Plus"
+                  size={size}
+                  variant="secondary"
+                  aria-label={`新增 ${size}`}
+                />
+              ))}
+            </Row>
           </div>
         </Section>
 
@@ -351,41 +758,121 @@ export function DesignSystemPage() {
 
         <Section
           index="08"
-          name="SearchInput"
-          title="搜索输入框"
-          description="SearchInput 用于页面内搜索。hover 时描边和图标高亮，输入内容后展示清空按钮。当前提供 32px 和 36px 两种尺寸。"
+          name="InputField"
+          title="输入框"
+          description="InputField 是输入框基础控件，SearchInput 和 CounterInput 是基于它的场景预设。当前定义 40、36、32 三档尺寸，支持 prefix、suffix、清空和报错组合。"
         >
           <div className="grid gap-1">
-            <Row label="size: md">
-              <SearchInput
+            <Row label="InputField / 40">
+              <InputField className="w-60" placeholder="请输入内容" aria-label="40 输入框" />
+              <InputField className="w-60" prefixIcon="Search" placeholder="搜索" aria-label="40 搜索" />
+            </Row>
+            <Row label="InputField / 36">
+              <InputField
+                size="lg"
                 className="w-60"
+                placeholder="请输入内容"
+                aria-label="36 输入框"
+              />
+              <InputField
+                size="lg"
+                className="w-60"
+                prefixIcon="Search"
                 placeholder="搜索"
-                aria-label="搜索"
+                aria-label="36 搜索"
               />
             </Row>
-            <Row label="md with value">
-              <SearchInput
+            <Row label="InputField / 32">
+              <InputField
+                size="md"
                 className="w-60"
-                defaultValue="搜索内容"
+                placeholder="请输入内容"
+                aria-label="32 输入框"
+              />
+              <InputField
+                size="md"
+                className="w-60"
+                prefixIcon="Search"
                 placeholder="搜索"
-                aria-label="搜索"
+                aria-label="32 搜索"
               />
             </Row>
-            <Row label="size: lg">
+            <Row label="InputField / suffix">
+              <InputField
+                className="w-60"
+                defaultValue="已输入内容"
+                placeholder="请输入内容"
+                clearable
+                aria-label="可清空输入框"
+              />
+              <InputField
+                size="lg"
+                className="w-60"
+                placeholder="请输入数量"
+                suffixText="个"
+                aria-label="带右侧文字输入框"
+              />
+              <InputField
+                size="md"
+                className="w-60"
+                defaultValue="验证中"
+                placeholder="请输入验证码"
+                suffix={<span className="shrink-0 text-sm leading-5 text-text-secondary">发送验证码</span>}
+                aria-label="带右侧操作输入框"
+              />
+            </Row>
+            <Row label="SearchInput">
+              <SearchInput className="w-60" placeholder="搜索" aria-label="搜索" />
               <SearchInput
                 size="lg"
                 className="w-60"
+                defaultValue="搜索内容"
                 placeholder="搜索"
-                aria-label="搜索"
+                aria-label="搜索内容"
               />
             </Row>
-            <Row label="lg with value">
+            <Row label="CounterInput">
+              <CounterInput
+                className="w-60"
+                placeholder="请输入昵称"
+                maxLength={15}
+                aria-label="计数输入框"
+              />
+              <CounterInput
+                size="lg"
+                className="w-60"
+                defaultValue="Hello"
+                prefixIcon="UserPen"
+                maxLength={15}
+                clearable
+                aria-label="带图标计数和清空输入框"
+              />
+            </Row>
+            <Row label="state / error">
+              <InputField
+                className="w-60"
+                defaultValue="错误内容"
+                placeholder="请输入内容"
+                clearable
+                error
+                aria-label="错误可清空输入框"
+              />
+              <CounterInput
+                size="lg"
+                className="w-60"
+                defaultValue="超出限制"
+                maxLength={15}
+                clearable
+                error
+                aria-label="错误计数输入框"
+              />
               <SearchInput
                 size="lg"
                 className="w-60"
-                defaultValue="搜索内容"
+                defaultValue="搜索错误"
                 placeholder="搜索"
-                aria-label="搜索"
+                error
+                aria-label="错误搜索框"
               />
             </Row>
           </div>
@@ -411,7 +898,323 @@ export function DesignSystemPage() {
             ))}
           </div>
         </Section>
+
+        <Section
+          index="10"
+          name="Popover"
+          title="浮窗"
+          description="Popover 普通类型分为 menu、options、panel：menu 默认 sm / 图标+文字，options 默认 sm / 文字+勾选，panel 默认 md / 搜索+分页标题+图标或封面+文字。日期选择和消息通知属于独立业务型浮窗，单独封装和展示。"
+        >
+          <div className="flex flex-wrap items-start gap-10">
+            <div className="grid gap-2">
+              <div className="text-sm font-medium text-text-primary">PopoverMenu / sm</div>
+              <PopoverMenu position="static" width="sm" shadow="strong" role="menu" aria-label="操作浮窗示例">
+                <PopoverSection>
+                  <PopoverItem icon="SquarePen" role="menuitem">重命名</PopoverItem>
+                </PopoverSection>
+                <PopoverDivider />
+                <PopoverSection>
+                  <PopoverItem icon="Trash" role="menuitem">删除</PopoverItem>
+                </PopoverSection>
+              </PopoverMenu>
+            </div>
+            <div className="grid gap-2">
+              <div className="text-sm font-medium text-text-primary">PopoverOptions / sm</div>
+              <PopoverOptions position="static" width="sm" role="listbox" aria-label="选择浮窗示例">
+                <PopoverSection>
+                  <PopoverItem
+                    selected={selectedPopoverOption === '选项一'}
+                    role="option"
+                    onClick={() => setSelectedPopoverOption('选项一')}
+                  >
+                    选项一
+                  </PopoverItem>
+                </PopoverSection>
+                <PopoverSection>
+                  <PopoverItem
+                    selected={selectedPopoverOption === '选项二'}
+                    role="option"
+                    onClick={() => setSelectedPopoverOption('选项二')}
+                  >
+                    选项二
+                  </PopoverItem>
+                </PopoverSection>
+                <PopoverSection>
+                  <PopoverItem
+                    selected={selectedPopoverOption === '选项三'}
+                    role="option"
+                    onClick={() => setSelectedPopoverOption('选项三')}
+                  >
+                    选项三
+                  </PopoverItem>
+                </PopoverSection>
+              </PopoverOptions>
+            </div>
+            <div className="grid gap-2">
+              <div className="text-sm font-medium text-text-primary">PopoverPanel / md</div>
+              <PopoverPanel
+                ref={popoverPanelPreviewRef}
+                position="static"
+                width="md"
+                role="listbox"
+                aria-label="封面选择浮窗示例"
+                style={
+                  hasPopoverSearchValue &&
+                  !hasPopoverPanelResults &&
+                  popoverPanelEmptyHeight !== null
+                    ? { height: popoverPanelEmptyHeight }
+                    : undefined
+                }
+              >
+                <PopoverSection>
+                  <PopoverSearch
+                    value={popoverSearchValue}
+                    placeholder="搜索"
+                    aria-label="搜索"
+                    onValueChange={setPopoverSearchValue}
+                  />
+                </PopoverSection>
+                <PopoverDivider />
+                {hasPopoverSearchValue && !hasPopoverPanelResults && (
+                  <PopoverSection>
+                    <PopoverEmpty>无搜索结果</PopoverEmpty>
+                  </PopoverSection>
+                )}
+                {firstPopoverPanelOptions.length > 0 && (
+                  <PopoverHeader>分页标题</PopoverHeader>
+                )}
+                {firstPopoverPanelOptions.map((option) => (
+                  <div key={option.label}>
+                    <PopoverSection>
+                      <PopoverItem
+                        selected={selectedPopoverPanelOption === option.label}
+                        role="option"
+                        onClick={() => setSelectedPopoverPanelOption(option.label)}
+                        startAdornment={
+                          <span className="mr-2 h-4 w-4 shrink-0 overflow-hidden rounded-icon">
+                            <img
+                              className="h-full w-full object-cover"
+                              src={option.src}
+                              alt=""
+                            />
+                          </span>
+                        }
+                      >
+                        {option.label}
+                      </PopoverItem>
+                    </PopoverSection>
+                  </div>
+                ))}
+                {secondPopoverPanelOptions.length > 0 && (
+                  <PopoverHeader>分页标题</PopoverHeader>
+                )}
+                {secondPopoverPanelOptions.map((option) => (
+                  <div key={option.label}>
+                    <PopoverSection>
+                      <PopoverItem
+                        selected={selectedPopoverPanelOption === option.label}
+                        role="option"
+                        onClick={() => setSelectedPopoverPanelOption(option.label)}
+                        startAdornment={
+                          <span className="mr-2 h-4 w-4 shrink-0 overflow-hidden rounded-icon">
+                            <img
+                              className="h-full w-full object-cover"
+                              src={option.src}
+                              alt=""
+                            />
+                          </span>
+                        }
+                      >
+                        {option.label}
+                      </PopoverItem>
+                    </PopoverSection>
+                  </div>
+                ))}
+              </PopoverPanel>
+            </div>
+            <div className="grid gap-2">
+              <div className="text-sm font-medium text-text-primary">DatePickerPopover / independent</div>
+              <DatePickerPopoverPreview
+                selectedDay={selectedDatePreviewDay}
+                visibleMonth={visibleDatePreviewMonth}
+                onSelectedDayChange={setSelectedDatePreviewDay}
+                onVisibleMonthChange={setVisibleDatePreviewMonth}
+              />
+            </div>
+            <div className="grid gap-2">
+              <div className="text-sm font-medium text-text-primary">NotificationPopover / independent</div>
+              <NotificationPopoverPreview
+                activeTab={activeNotificationPreviewTab}
+                onActiveTabChange={setActiveNotificationPreviewTab}
+              />
+            </div>
+          </div>
+        </Section>
+
+        <Section
+          index="11"
+          name="Modal"
+          title="模态弹窗"
+          description="Modal 按尺寸档沉淀模式控件：360 InfoModal、480 ConfirmModal / FormModal、640 FeatureModal、720 ContentModal、960 WorkflowModal。页面优先使用模式控件，复杂业务弹窗作为对应模式下的业务实例。"
+        >
+          <div className="grid gap-1">
+            <Row label="360 / InfoModal">
+              <Button
+                variant="secondary"
+                onClick={() => setActiveModalPreview('info')}
+              >
+                打开信息弹窗
+              </Button>
+            </Row>
+            <Row label="480 / ConfirmModal">
+              <Button
+                variant="secondary"
+                onClick={() => setActiveModalPreview('confirm')}
+              >
+                打开确认弹窗
+              </Button>
+            </Row>
+            <Row label="480 / FormModal">
+              <Button
+                variant="secondary"
+                onClick={() => setActiveModalPreview('form')}
+              >
+                打开表单弹窗
+              </Button>
+            </Row>
+            <Row label="640 / FeatureModal">
+              <Button
+                variant="secondary"
+                onClick={() => setActiveModalPreview('feature')}
+              >
+                打开功能弹窗
+              </Button>
+            </Row>
+            <Row label="720 / ContentModal">
+              <Button
+                variant="secondary"
+                onClick={() => setActiveModalPreview('content')}
+              >
+                打开内容弹窗
+              </Button>
+            </Row>
+            <Row label="960 / WorkflowModal">
+              <Button
+                variant="secondary"
+                onClick={() => setActiveModalPreview('workflow')}
+              >
+                打开流程弹窗
+              </Button>
+            </Row>
+          </div>
+        </Section>
       </div>
+
+      {activeModalPreview === 'info' && (
+        <InfoModal
+          title="小型信息"
+          description="这里可以放二维码、图标、图片或状态说明。"
+          media={
+            <div className="flex h-28 w-28 items-center justify-center rounded-pill bg-bg-soft text-text-primary">
+              <Icon name="Info" size="2xl" />
+            </div>
+          }
+          onClose={() => setActiveModalPreview(null)}
+        />
+      )}
+
+      {activeModalPreview === 'confirm' && (
+        <ConfirmModal
+          title="确认执行操作？"
+          description="确认弹窗用于普通确认、危险操作、删除和状态变更。"
+          confirmText="确认"
+          onClose={() => setActiveModalPreview(null)}
+          onConfirm={() => undefined}
+        />
+      )}
+
+      {activeModalPreview === 'form' && (
+        <FormModal
+          title="编辑名称"
+          confirmDisabled={!modalFormName.trim()}
+          onClose={() => setActiveModalPreview(null)}
+          onConfirm={() => modalFormName.trim().length > 0}
+        >
+          <InputField
+            className="w-full"
+            value={modalFormName}
+            placeholder="请输入名称"
+            aria-label="请输入名称"
+            onValueChange={setModalFormName}
+          />
+        </FormModal>
+      )}
+
+      {activeModalPreview === 'feature' && (
+        <FeatureModal
+          title="中型功能面板"
+          footer={({ close }) => (
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" onClick={close}>
+                取消
+              </Button>
+              <Button onClick={close}>完成</Button>
+            </div>
+          )}
+          onClose={() => setActiveModalPreview(null)}
+        >
+          <div className="grid gap-3 text-sm leading-5 text-text-secondary">
+            <p>FeatureModal 用于登录、授权、绑定、多字段配置等中型功能页。</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-button bg-bg-soft p-4">表单区域</div>
+              <div className="rounded-button bg-bg-soft p-4">辅助区域</div>
+            </div>
+          </div>
+        </FeatureModal>
+      )}
+
+      {activeModalPreview === 'content' && (
+        <ContentModal
+          title="内容阅读"
+          panelClassName="h-[640px]"
+          bodyClassName="overflow-y-auto"
+          onClose={() => setActiveModalPreview(null)}
+        >
+          <div className="grid gap-4 whitespace-pre-wrap text-sm leading-5 text-text-primary">
+            <p>ContentModal 用于协议、说明、文档、多 Tab 内容等长内容场景。</p>
+            <p>
+              内容区域应独立滚动，标题栏保持稳定。这里展示的是结构预览，业务页面可以在标题区放置 Tab 或其他内容导航。
+            </p>
+            <p>
+              当内容很长时，不要让整个页面滚动；只滚动弹窗内容区，避免关闭按钮和操作区域离开视野。
+            </p>
+          </div>
+        </ContentModal>
+      )}
+
+      {activeModalPreview === 'workflow' && (
+        <WorkflowModal
+          title="复杂流程"
+          panelClassName="h-[560px]"
+          bodyPadding={false}
+          onClose={() => setActiveModalPreview(null)}
+        >
+          <div className="flex h-full min-h-0">
+            <div className="min-w-0 flex-1 p-8">
+              <div className="grid grid-cols-3 gap-3">
+                {[1, 2, 3, 4, 5, 6].map((item) => (
+                  <div key={item} className="rounded-button bg-bg-soft p-4 text-sm">
+                    流程选项 {item}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <aside className="w-[280px] shrink-0 bg-bg-soft p-8 text-sm leading-5 text-text-secondary">
+              右侧区域可承载支付、摘要、步骤状态或结果预览。
+            </aside>
+          </div>
+        </WorkflowModal>
+      )}
     </main>
   );
 }

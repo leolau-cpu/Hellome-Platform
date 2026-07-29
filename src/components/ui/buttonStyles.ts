@@ -1,7 +1,9 @@
 export type ButtonVariant = 'primary' | 'secondary' | 'text' | 'warning' | 'notice';
 export type ButtonSize = 'xl' | 'lg' | 'md' | 'sm' | 'xs';
 export type ButtonSurface = 'white' | 'soft';
-export type ButtonLinkTone = 'black' | 'red' | 'yellow' | 'green';
+export type ButtonShape = 'default' | 'pill';
+export type TextLinkTone = 'black' | 'red' | 'yellow' | 'green' | 'blue';
+export type ButtonLinkTone = TextLinkTone;
 
 const sizeClassNames: Record<ButtonSize, string> = {
   xl: 'min-h-10 px-5 py-2.5 text-sm',
@@ -9,6 +11,19 @@ const sizeClassNames: Record<ButtonSize, string> = {
   md: 'min-h-8 px-4 py-1.5 text-sm',
   sm: 'min-h-7 px-3.5 py-1.5 text-xs',
   xs: 'min-h-6 px-3 py-1 text-xs',
+};
+
+const iconOnlySizeClassNames: Record<ButtonSize, string> = {
+  xl: 'h-10 w-10 text-sm',
+  lg: 'h-9 w-9 text-sm',
+  md: 'h-8 w-8 text-sm',
+  sm: 'h-7 w-7 text-xs',
+  xs: 'h-6 w-6 text-xs',
+};
+
+const shapeClassNames: Record<ButtonShape, string> = {
+  default: 'rounded-button',
+  pill: 'rounded-pill',
 };
 
 const filledVariantClassNames: Record<Extract<ButtonVariant, 'primary' | 'warning' | 'notice'>, string> = {
@@ -54,11 +69,20 @@ const surfaceVariantClassNames: Record<
   },
 };
 
-const linkToneClassNames: Record<ButtonLinkTone, string> = {
+const textLinkToneClassNames: Record<TextLinkTone, string> = {
   black: 'text-text-primary hover:text-text-secondary active:text-text-primary',
-  red: 'text-accent-error hover:text-accent-error active:text-accent-error',
-  yellow: 'text-button-notice hover:text-button-notice-hover active:text-button-notice-active',
-  green: 'text-accent-success hover:text-accent-success active:text-accent-success',
+  red: 'text-accent-error hover:text-accent-redHover active:text-accent-linkRedActive',
+  yellow: 'text-accent-linkYellow hover:text-accent-linkYellowHover active:text-accent-linkYellowActive',
+  green: 'text-accent-success hover:text-accent-greenHover active:text-accent-linkGreenActive',
+  blue: 'text-accent-link hover:text-accent-blueHover active:text-accent-linkBlueActive',
+};
+
+const textLinkSizeClassNames: Record<ButtonSize, string> = {
+  xl: 'text-sm leading-5',
+  lg: 'text-sm leading-5',
+  md: 'text-sm leading-5',
+  sm: 'text-xs leading-4',
+  xs: 'text-xs leading-4',
 };
 
 function mergeClassNames(...classNames: Array<string | undefined>) {
@@ -81,42 +105,52 @@ export function buttonClassName({
   variant = 'primary',
   size = 'lg',
   surface = 'white',
+  shape = 'default',
   selected = false,
   fullWidth = false,
+  iconOnly = false,
+  hasInlineIcon = false,
   className,
 }: {
   variant?: ButtonVariant;
   size?: ButtonSize;
   surface?: ButtonSurface;
+  shape?: ButtonShape;
   selected?: boolean;
   fullWidth?: boolean;
+  iconOnly?: boolean;
+  hasInlineIcon?: boolean;
   className?: string;
 }) {
   return mergeClassNames(
-    'inline-flex box-border items-center justify-center rounded-button font-normal transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-selected disabled:pointer-events-none',
-    sizeClassNames[size],
+    'inline-flex box-border shrink-0 items-center justify-center font-normal transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-selected disabled:pointer-events-none',
+    shapeClassNames[shape],
+    iconOnly ? iconOnlySizeClassNames[size] : sizeClassNames[size],
+    hasInlineIcon ? 'gap-1.5' : undefined,
     variantClassName(variant, surface, selected),
     fullWidth ? 'w-full' : undefined,
     className,
   );
 }
 
-export function buttonLinkClassName({
+export function textLinkClassName({
   size = 'lg',
   tone = 'black',
   fullWidth = false,
   className,
 }: {
   size?: ButtonSize;
-  tone?: ButtonLinkTone;
+  tone?: TextLinkTone;
   fullWidth?: boolean;
   className?: string;
 }) {
   return mergeClassNames(
-    'inline-flex box-border items-center justify-center rounded-button bg-transparent font-normal shadow-none transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-selected disabled:pointer-events-none disabled:text-text-disabled',
-    sizeClassNames[size],
-    linkToneClassNames[tone],
+    'inline-flex box-border items-center bg-transparent p-0 font-normal shadow-none transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-selected disabled:pointer-events-none disabled:text-text-disabled',
+    textLinkSizeClassNames[size],
+    textLinkToneClassNames[tone],
     fullWidth ? 'w-full' : undefined,
     className,
   );
 }
+
+export const buttonLinkClassName = textLinkClassName;

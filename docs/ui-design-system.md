@@ -61,6 +61,10 @@
 | `text.placeholder` | `#B3B3B3` | 输入占位符 |
 | `text.disabled` | `#CCCCCC` | 禁用文字 |
 | `text.inverse` | `#FFFFFF` | 深色背景上的文字 |
+| `text.danger` | `#D94E41` | 红（危险），用于危险操作、错误、不可恢复提醒 |
+| `text.warning` | `#D97C25` | 黄（警示），用于警示、注意、额度提醒 |
+| `text.success` | `#219B5A` | 绿（成功），用于成功、完成、进行中状态 |
+| `text.info` | `#0074D9` | 蓝（信息），用于信息提示、链接、云空间等信息类入口 |
 
 ### 3.2 分割线颜色
 
@@ -98,8 +102,8 @@
 | Token | Color | Usage |
 | --- | --- | --- |
 | `accent.success` | `#219B5A` | 成功、进行中等状态文字 |
-| `accent.successBorder` | `#27B66A` | 成功、进行中等状态描边 |
-| `accent.blue` | `#1685FE` | 云空间、蓝色功能提示 |
+| `accent.green` | `#27B66A` | 成功、进行中等状态描边 |
+| `accent.blue` | `#0088FF` | 云空间、蓝色功能提示 |
 
 ### 3.5 执行规则
 
@@ -158,6 +162,8 @@
 | `sm` | `12px` | `16px` | `6px 14px` | `28px` | 小按钮、列表操作 |
 | `xs` | `12px` | `16px` | `4px 12px` | `24px` | 极小按钮、标签式操作 |
 
+带文字的图标按钮使用 `Button icon="..."`。图标与文字间距统一为 `6px`；`xl`、`lg`、`md` 使用 `16px` 图标，`sm`、`xs` 使用 `14px` 图标。
+
 ### 5.2 按钮样式
 
 | Token | Type | State | Background | Text Color | Border |
@@ -181,10 +187,21 @@
 | `button.text.white.active` | 文字按钮 | 白底点击 / 选中 | `#F3F3F3` | `#000000` | none |
 | `button.text.soft.hover` | 文字按钮 | 灰底悬停 | `#F3F3F3` | `#000000` | none |
 | `button.text.soft.active` | 文字按钮 | 灰底点击 / 选中 | `#EAEAEA` | `#000000` | none |
-| `button.link.black` | 链接按钮 | 默认 | transparent | `#000000` | none |
-| `button.link.red` | 链接按钮 | 默认 | transparent | `#D94E41` | none |
-| `button.link.yellow` | 链接按钮 | 默认 | transparent | `#FF922B` | none |
-| `button.link.green` | 链接按钮 | 默认 | transparent | `#219B5A` | none |
+| `button.link.black.default` | 链接按钮 | 默认 | transparent | `#000000` | none |
+| `button.link.black.hover` | 链接按钮 | 悬停 | transparent | `#666666` | none |
+| `button.link.black.active` | 链接按钮 | 点击 | transparent | `#000000` | none |
+| `button.link.red.default` | 链接按钮 | 默认 | transparent | `#D94E41` | none |
+| `button.link.red.hover` | 链接按钮 | 悬停 | transparent | `#FF796D` | none |
+| `button.link.red.active` | 链接按钮 | 点击 | transparent | `#91342C` | none |
+| `button.link.yellow.default` | 链接按钮 | 默认 | transparent | `#D97C25` | none |
+| `button.link.yellow.hover` | 链接按钮 | 悬停 | transparent | `#FFA651` | none |
+| `button.link.yellow.active` | 链接按钮 | 点击 | transparent | `#915319` | none |
+| `button.link.green.default` | 链接按钮 | 默认 | transparent | `#219B5A` | none |
+| `button.link.green.hover` | 链接按钮 | 悬停 | transparent | `#4EC385` | none |
+| `button.link.green.active` | 链接按钮 | 点击 | transparent | `#16683C` | none |
+| `button.link.blue.default` | 链接按钮 | 默认 | transparent | `#0074D9` | none |
+| `button.link.blue.hover` | 链接按钮 | 悬停 | transparent | `#2E9DFF` | none |
+| `button.link.blue.active` | 链接按钮 | 点击 | transparent | `#004E91` | none |
 | `button.disabled` | 通用禁用态 | 禁用 | transparent | `#CCCCCC` | `1px solid #E5E5E5` |
 
 ### 5.3 按钮圆角
@@ -194,13 +211,34 @@
 | `button.radius.default` | 圆角按钮 | `8px` | 常规按钮、后台系统、表单操作、弹窗按钮 |
 | `button.radius.pill` | 全圆角按钮 | `999px` / `50%` | 强引导按钮、胶囊按钮、标签式按钮、移动端底部主按钮 |
 
+### 5.3.1 仅图标按钮
+
+仅图标按钮使用 `IconButton`，用于工具栏操作、列表操作、关闭、展开、设置、删除等只有图标即可表达的操作。页面不得手写固定宽高的图标按钮。
+
+| Size | Button Size | Default Icon Size | Usage |
+| --- | --- | --- | --- |
+| `xl` | `40px × 40px` | `md` / `16px` | 强操作图标按钮 |
+| `lg` | `36px × 36px` | `md` / `16px` | 默认较大图标按钮 |
+| `md` | `32px × 32px` | `md` / `16px` | 默认图标按钮 |
+| `sm` | `28px × 28px` | `md` / `16px` | 列表、表格内图标按钮 |
+| `xs` | `24px × 24px` | `md` / `16px` | 紧凑区域图标按钮 |
+
+- `IconButton` 必须传入 `aria-label`。
+- `IconButton` 支持 `variant`、`size`、`surface`、`shape`、`selected` 和 `disabled`。
+- 工具栏单图标按钮使用 `ToolbarIconButton`，用于筛选、全部已读、工具操作等场景。
+- `ToolbarIconButton` 默认 `32px × 32px`，默认图标色 `text.secondary`，hover / active 图标色为 `text.primary`。
+- `ToolbarIconButton` 叠加在白色背景时使用 `surface="white"`，叠加在灰色背景时使用 `surface="soft"`。
+- 全圆形图标按钮使用 `shape="pill"`。
+- 带文字按钮不要使用 `IconButton`，应使用 `Button icon="..."`，不要在内容中手写 `Icon` 和间距。
+- 弹窗右上角关闭按钮使用 `ModalCloseButton`，底层复用 `IconButton`，不要在弹窗里手写关闭按钮结构；叠加在灰色背景时传入 `surface="soft"`。
+
 ### 5.4 执行规则
 
 - 每个页面只保留一个最强主按钮。
 - 主按钮使用 `primary`，不要用彩色渐变代替。
 - 次级操作使用 `secondary` 或 `text`。
 - 线框按钮和文字按钮叠加在白色背景时使用 `surface="white"`；叠加在灰色背景时使用 `surface="soft"`。
-- 链接按钮使用 `ButtonLink`，不使用填充和描边，只通过 `tone="black" | "red" | "yellow" | "green"` 控制文字颜色。
+- 链接按钮使用 `ButtonLink`，不使用填充和描边，只通过 `tone="black" | "red" | "yellow" | "green" | "blue"` 控制文字颜色。
 - 提示类操作使用 `notice`，例如充值、付费确认、额度提醒等带橙色引导的操作。
 - 危险操作才使用 `warning`。
 - 默认按钮尺寸使用 `lg`，即 `36px` 高。
@@ -214,8 +252,14 @@
 - 禁用按钮必须同时体现禁用文字和禁用边框。
 - 所有按钮禁用态统一使用 `button.disabled`，不保留原按钮类型背景。
 - 按钮 `loading` / `处理中` 状态必须在文字前使用 `loader-circle` 旋转图标。
+- 带文字的图标按钮必须使用 `Button icon`，图标和文字之间固定 `6px` 间距。
+- `40px`、`36px`、`32px` 按钮内图标为 `16px`；`28px`、`24px` 按钮内图标为 `14px`。
+- 仅图标按钮所有尺寸默认图标均为 `16px`。
 - 按钮文字默认单行显示；文案过长时优先缩短文案，不通过增加高度解决。
 - 常规按钮圆角为 `8px`，不要随意使用超大圆角。
+- 全圆角按钮使用 `Button shape="pill"`，不要在页面里手写 `rounded-pill`。
+- 仅图标按钮使用 `IconButton`，不要在页面里手写按钮宽高和图标居中结构。
+- 工具栏图标按钮使用 `ToolbarIconButton`，不要在页面里手写 `text-secondary hover:text-primary` 这类状态组合。
 
 ### 5.5 Tab 按钮
 
@@ -259,34 +303,183 @@ TabBar 用于横向分类、筛选和视图切换容器。TabBar 内部使用 `T
 - 点击左 / 右箭头时，按固定 `160px` 距离平滑滚动。
 - 左右箭头必须放在对应渐变覆盖层内，不直接悬浮在 TabButton 上。
 
-### 5.7 SearchInput 搜索输入框
+### 5.7 InputField 输入框
 
-SearchInput 用于页面内搜索、筛选搜索和列表检索。页面内不得临时手写搜索框结构，必须通过统一 `SearchInput` 控件使用。
+InputField 是输入框基础控件，用于普通文本输入、表单输入和特殊输入组合。页面内不得临时手写输入框结构。`SearchInput`、`CounterInput` 是基于 `InputField` 的场景预设。
 
 | Size | Height | Padding X | Font Size | Icon | Usage |
 | --- | --- | --- | --- | --- | --- |
-| `md` | `32px` | `14px` | `14px` | `16px / 1px` | 默认搜索框、工具栏搜索 |
-| `lg` | `36px` | `16px` | `14px` | `16px / 1px` | 较强调搜索、页面顶部搜索 |
+| `xl` | `40px` | `16px` | `14px` | `16px / 1px` | 表单输入、弹窗输入、登录输入 |
+| `lg` | `36px` | `14px` | `14px` | `16px / 1px` | 页面顶部搜索、较紧凑表单输入 |
+| `md` | `32px` | `14px` | `14px` | `16px / 1px` | 工具栏搜索、列表筛选、小型输入 |
 
-| State | Border | Icon | Text | Clear Button |
+| State | Border | Icon / Prefix | Text | Right Area |
 | --- | --- | --- | --- | --- |
 | `default` | `border.strong` | `text.hint` | `text.primary` | hidden |
 | `hover` | `border.hover` | `text.hint` | `text.primary` | 按输入状态显示 |
 | `active` | `border.selected` | `text.primary` | `text.primary` | 按输入状态显示 |
 | `focus` | `border.selected` | `text.primary` | `text.primary` | 按输入状态显示 |
-| `hasValue` | 按 hover / focus 状态 | 按 hover / focus 状态 | `text.primary` | visible |
+| `hasValue` | 按 hover / focus 状态 | 按 hover / focus 状态 | `text.primary` | 按配置显示 |
+| `error` | `#FF5C4D` | 按当前交互状态 | `text.primary` | 按配置显示 |
 
-- 搜索图标使用 `Icon name="Search"`，默认 `md` 尺寸。
-- 输入文字后右侧展示清空按钮。
-- 清空按钮尺寸为 `14px × 14px`，圆形。
+- 普通输入框使用 `InputField`。
+- 搜索输入框使用 `SearchInput`；特殊搜索组合可使用 `InputField prefixIcon="Search" clearable`。
+- 带计数输入框使用 `CounterInput`，例如昵称、标题、项目名等需要展示字数的场景。
+- 带图标输入框使用 `prefixIcon`；需要图片图标时使用 `prefixAsset`。
+- 右侧清空按钮通过 `clearable` 开启。
+- 右侧文字通过 `suffixText` 开启，例如 `0/15`、单位、状态说明；颜色使用 `text.placeholder`。
+- 右侧自定义操作通过 `suffix` 开启，例如发送验证码。
+- 清空按钮使用 `16px × 16px` 外层容器，内部圆形按钮为 `14px × 14px`。
 - 清空按钮默认底色使用 `text.hint`，hover 使用 `text.secondary`，active 使用 `text.primary`。
 - 清空按钮内关闭图标使用 `Icon name="X" size="xs"`，即 `10px`，颜色使用 `text.inverse`。
-- SearchInput 圆角沿用 `button.radius.default`，即 `8px`。
-- SearchInput 的浏览器原生清除按钮不作为交互来源，清空行为由控件内部实现。
+- 报错状态通过 `error` 开启，描边使用红色 `#FF5C4D`。
+- 点击清空按钮后，输入框必须继续保持输入状态。
+- InputField 背景透明，承接所在容器背景，不额外设置白色底。
+- InputField 圆角沿用 `button.radius.default`，即 `8px`。
+- InputField 的浏览器原生清除按钮不作为交互来源，清空行为由控件内部实现。
 
-## 6. 后续落地要求
+## 6. Popover 浮窗
 
-### 6.1 优先级
+Popover 用于点击触发后的轻量浮层，不阻断页面操作。普通 Popover 分为 menu、options、panel 三种；日期选择和消息通知属于业务专用 Popover。
+
+### 6.1 类型
+
+| Component | Default Width | Allowed Width | Usage |
+| --- | --- | --- | --- |
+| `PopoverMenu` | `sm / 160px` | `sm / md` | 菜单型浮窗，默认结构为图标 + 文字 |
+| `PopoverOptions` | `sm / 160px` | `sm / md / lg / trigger / content` | 选项型浮窗，默认结构为文字 + 勾选 |
+| `PopoverPanel` | `md / 220px` | `sm / md / lg / trigger / content` | 面板型浮窗，默认结构为搜索 + 分页标题 + 图标或封面 + 文字 |
+
+业务专用浮窗不强行纳入通用类型。例如 `NotificationPopover` 是顶部通知中心浮窗，宽度为 `400px`，包含消息类型切换、消息列表、空状态和底部操作区；它底层复用 `Popover` 基础壳，但不使用 `PopoverPanel` 的默认宽度和内容结构。
+
+### 6.2 宽度
+
+| Width | Value | Usage |
+| --- | --- | --- |
+| `sm` | `160px` | 默认菜单宽度，项目内最常用 |
+| `md` | `220px` | 较长选项或中等信息浮窗，例如全部 APIKEY |
+| `lg` | `320px` | 复杂内容浮窗，为后续页面预留 |
+| `trigger` | 跟随触发器宽度，最小 `160px`，默认不限制最大宽度 | 下拉内容需要与输入框、按钮、选择器等触发器等宽 |
+| `content` | 内容自适应，最小 `160px`，最大 `320px` | 内容长度不固定但不应无限撑开的轻量内容 |
+
+通用 Popover 模式优先使用宽度 token，不在页面里随意写数值宽度。类型只决定默认尺寸和默认模块倾向；尺寸和模块内容都可以按场景传入。业务专用 Popover 如 `NotificationPopover`、`DatePickerPopover` 可以按业务结构使用固定数值宽度，但必须直接复用 `Popover` 基础壳，不占用普通类型命名。
+
+### 6.3 内容模块
+
+| Module | Usage |
+| --- | --- |
+| `PopoverHeader` | 标题、分页标题、分组标题 |
+| `PopoverSection` | 内容分组，提供统一左右内边距 |
+| `PopoverSearch` | 搜索模块，占位态为搜索图标 + 占位文字 |
+| `PopoverEmpty` | 空结果占位，复用选项行高度和间距，无交互 |
+| `PopoverItem` | 菜单项、选择项、带图标操作、带勾选选项 |
+| `PopoverDivider` | 分割线 |
+
+搜索、图标、封面、勾选、分割线、分页标题都属于内容模块，不作为独立浮窗类型。不同类型浮窗可以按业务需要组合这些模块。
+
+`PopoverSearch` 只搜索当前浮窗内的内容；搜索图标使用 `text.hint`，占位文字使用 `text.placeholder`，hover 时不出现底色。输入内容后右侧出现清空按钮，点击清空后继续保持输入状态。搜索无结果时，浮窗高度保持搜索前高度，下方内容展示 `PopoverEmpty`，文字使用 `text.hint`。
+
+### 6.4 交互规则
+
+- 浮窗和触发器之间默认保持 `4px` 间距。
+- 带触发器的普通浮窗默认使用 `anchorRef` 自适应定位：上下方向以触发器为判断点，优先向当前窗口剩余空间更大的方向弹出；左右方向只判断左对齐或右对齐，浮窗边缘始终与触发器边缘对齐。
+- 普通浮窗最大高度按当前浏览器窗口计算，距离窗口上下边缘最小保留 `48px`；内容超出时浮窗内部滚动。左右方向不设置窗口安全间距。`48px` 只作为内容超高时的最大高度约束，不用于强制撑高浮窗。
+- 浮窗打开后页面滚动时，浮窗跟随触发件移动；触发件滚出窗口时，浮窗也允许跟随滚出窗口，不再吸附在窗口上下 `48px` 安全区内。
+- 搜索型浮窗有结果时高度按实际内容自适应，并记录当前非空内容高度；无结果时高度使用上一次非空内容高度。如果第一次搜索即无结果，则使用搜索前的实际高度。该锁定高度仍不得超过当前窗口按上下 `48px` 计算出的最大可用高度。
+- `DatePickerPopover` 复用自适应弹出方向和左右对齐逻辑，但不复用普通浮窗的最大高度限制。
+- `NotificationPopover` 使用通知中心自己的内容和高度规则，不归入普通浮窗类型；弹出位置仍需基于通知触发器对齐。
+- 浮窗触发器使用 `pointerdown` 打开，点击瞬间即响应，不等待鼠标释放。
+- 浮窗展开后，点击页面其他功能应直接响应被点击目标的功能；外部点击关闭逻辑不得吞掉这次点击。
+- 同一时间同一触发区域只保留一个展开浮窗。
+- 浮窗内部点击不触发外部关闭，除非当前菜单项本身执行关闭逻辑。
+- 普通浮窗不使用遮罩，不使用 `role="dialog"`，需要阻断操作时改用 Modal。
+
+## 7. Layout 页面适配
+
+Layout 规范按端类型分层：`Desktop Web Layout`、`Tablet Layout`、`Mobile Layout`。当前仅实现 `Desktop Web Layout`；平板和手机移动端后续单独补充。
+
+### 7.1 适配隔离原则
+
+不同端的适配规则必须相互隔离。新增或调整某一端布局时，不得影响其他端已确认的样式、间距、结构和交互。
+
+- `Desktop Web Layout`、`Tablet Layout`、`Mobile Layout` 分开定义，不用一个全局样式同时覆盖多个端。
+- 调整手机端面板层、菜单间距、底部导航、底部 Sheet 等规则时，必须写在手机端限定规则中，不得污染网页端和平板端。
+- 调整平板端布局时，必须验证网页端和手机端样式没有变化。
+- 跨端共用控件只承载基础一致性；端差异，例如布局层级、面板形式、菜单密度、页面边距，应写在对应端 Layout 规则中。
+- 修改某一端适配后，必须至少回归另两个端的关键页面布局。
+
+### 7.2 Desktop Web Layout
+
+右侧主内容区域最小适配宽度保持 `1024px`。左侧边栏不参与该适配规则。
+
+页面主内容横向边距使用 `page-section-x`，由当前承担页面左右边距的容器板块单独引用，不在最外层 `main` 统一加 padding，也不改组件内部 padding。
+
+| Viewport Width | Horizontal Padding |
+| --- | --- |
+| `1024px - 1279px` | `24px` |
+| `1280px - 1439px` | `32px` |
+| `1440px - 1599px` | `40px` |
+| `>= 1600px` | `48px` |
+
+仅替换页面主板块左右边距；卡片、弹窗、表格单元格、按钮、输入框等组件内部间距不跟随该规则变化。
+
+右侧顶部固定导航也必须遵守 `1024px` 最小适配宽度。展开侧栏时标题栏最小宽度为 `784px`，收起侧栏时标题栏最小宽度为 `972px`，避免浏览器宽度小于 `1024px` 时 fixed 导航继续压缩。
+
+### 7.3 Tablet Layout
+
+后续单独定义。未定义前，不得用平板假设修改 `Desktop Web Layout`。
+
+### 7.4 Mobile Layout
+
+后续单独定义。未定义前，不得用手机移动端假设修改 `Desktop Web Layout`。
+
+## 8. Modal 模态弹窗
+
+Modal 用于需要阻断当前页面操作、要求用户完成阅读、确认、填写或流程操作的场景。页面不得重复手写 `fixed inset-0` 遮罩、弹窗动画、`role="dialog"`、`aria-modal` 和关闭逻辑，必须优先使用已封装的 Modal 控件。
+
+### 8.1 基础骨架
+
+`Modal` 是底层弹窗骨架，不作为业务首选控件。它负责遮罩、居中、尺寸、圆角、阴影、动画、点击遮罩关闭、`Esc` 关闭、关闭按钮、Header / Body / Footer 和可访问性属性。
+
+页面优先使用模式控件；只有复杂业务弹窗或新模式尚未稳定时，才直接使用 `Modal size="..."`。
+
+### 8.2 尺寸档与模式控件
+
+| Size | Width | Component | Usage | Current Instance |
+| --- | --- | --- | --- | --- |
+| `sm` | `360px` | `InfoModal` | 小型信息展示，图片、图标、二维码、简短说明 | 开票、联系客服 |
+| `md` | `480px` | `ConfirmModal` | 确认、警告、删除、状态变更 | 全部已读、退出登录、删除项目、删除任务 |
+| `md` | `480px` | `FormModal` | 表单、编辑、创建，支持单字段或多字段 | 新建项目、重命名项目、个人资料 |
+| `lg` | `640px` | `FeatureModal` | 中型功能面板，多字段功能页、登录、授权、绑定 | 登录 |
+| `xl` | `720px` | `ContentModal` | 长内容、协议、说明、多 Tab 内容 | 隐私政策、服务条款 |
+| `2xl` | `960px` | `WorkflowModal` | 复杂流程、分栏业务、支付、配置向导 | 充值 |
+
+移动端或窄屏时，弹窗宽度使用 `min(tokenWidth, calc(100vw - 48px))`。
+
+### 8.3 通用结构
+
+| Area | Rule |
+| --- | --- |
+| Overlay | 默认 `bg-bg-black/60` |
+| Container | `rounded-modal`，默认 `shadow-card-hover` |
+| Header | 标题 + 右侧关闭按钮，标准内边距 `pl-6 pr-4 pt-4 pb-2` |
+| Title | `16px / 24px`，`font-medium` |
+| Close Button | `ModalCloseButton`，`32px × 32px`，使用 `Icon name="X"` |
+| Body | 默认 `px-6 py-4`，复杂业务可关闭默认内边距 |
+| Footer | 默认 `px-6 pt-4 pb-6`，右对齐 |
+| Footer Button | 默认使用 `Button size="lg"` |
+
+- `InfoModal` 内容默认居中，通常无 Footer。
+- `ConfirmModal` 固定为标题、说明、取消按钮、确认按钮。
+- `FormModal` 固定为标题、表单内容、取消按钮、确认按钮；内容区不限制字段数量。
+- `FeatureModal`、`ContentModal`、`WorkflowModal` 可以承载业务自定义内容，但仍必须复用统一 Modal 行为。
+- 业务弹窗如 `LoginModal`、`RechargeModal` 不直接变成通用控件，应作为对应模式下的业务实例。
+- 弹窗右上角关闭按钮统一使用 `ModalCloseButton`；`X` 的视觉描边按弹窗规范保持一致；灰底区域使用 `surface="soft"`。
+- 点击遮罩关闭仅在鼠标按下和释放都发生在遮罩本身时触发；从弹窗内容区按下后拖到遮罩释放，不关闭弹窗。
+
+## 9. 后续落地要求
+
+### 9.1 优先级
 
 后续 UI 优化时，执行优先级如下：
 
@@ -296,19 +489,20 @@ SearchInput 用于页面内搜索、筛选搜索和列表检索。页面内不�
 
 如果旧页面样式和本文档冲突，以本文档为准。
 
-### 6.2 AI 执行规则
+### 9.2 AI 执行规则
 
 AI 修改页面时必须做到：
 
 - 改动前先确认当前页面属于前台、后台、运营位还是特殊营销页，再选择对应按钮尺寸和字体层级。
 - 先检查本页面使用的字号、行高、颜色和按钮。
 - 图标必须通过统一 `Icon` 组件使用，不直接在页面内引入 `lucide-react`。
+- 模态弹窗必须先判断尺寸档，再选择 `InfoModal`、`ConfirmModal`、`FormModal`、`FeatureModal`、`ContentModal` 或 `WorkflowModal`。
 - 把不符合本文档的样式收敛到规范 token。
 - 不新增后端接口，不修改服务端逻辑。
 - 不为了视觉效果新增无意义颜色、渐变、阴影或大圆角。
 - 修改后检查移动端和桌面端是否有文字溢出、遮挡、错位。
 
-### 6.3 当前适用范围
+### 9.3 当前适用范围
 
 本规范适用于：
 

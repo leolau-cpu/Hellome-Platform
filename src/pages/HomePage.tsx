@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { ChangeEvent, ReactNode, Ref } from 'react';
+import type { ChangeEvent, ReactNode, Ref, RefObject } from 'react';
 import {
   defaultProfileNickname,
   getCurrentMockUser,
@@ -28,6 +28,7 @@ import {
   resetMockProjects,
   saveCurrentMockProjects,
   type MockProject,
+  type MockProjectFile,
   type MockProjectItem,
 } from '../api/mock/mockProjectApi';
 import {
@@ -40,8 +41,31 @@ import {
   type MockProductBillingDetail,
   type MockRequestBillingDetail,
 } from '../api/mock/mockAccountApi';
-import { Button } from '../components/ui/Button';
+import {
+  Button,
+  IconButton,
+  ModalCloseButton,
+  ToolbarIconButton,
+} from '../components/ui/Button';
 import { Icon, SortChevronsIcon } from '../components/ui/Icon';
+import { CounterInput, InputField } from '../components/ui/Input';
+import {
+  ConfirmModal,
+  ContentModal,
+  FormModal,
+  InfoModal,
+  WorkflowModal,
+} from '../components/ui/Modal';
+import { NotificationPopover } from '../components/ui/NotificationPopover';
+import {
+  Popover,
+  PopoverMenu,
+  PopoverDivider,
+  PopoverItem,
+  PopoverSection,
+  PopoverOptions,
+  type PopoverOptionsWidth,
+} from '../components/ui/Popover';
 import { SearchInput } from '../components/ui/SearchInput';
 import { TabBar } from '../components/ui/TabBar';
 import { LoginModal } from './LoginPage';
@@ -94,6 +118,21 @@ const projectDetailStatusFilterOptions = [
   '已取消',
   '草稿',
 ] as const;
+const projectFileTypeFilterOptions = [
+  '全部',
+  '文件夹',
+  '压缩包',
+  '文档',
+  '表格',
+  '幻灯片',
+  'PDF',
+  '图片',
+  '视频',
+  '音频',
+  '链接',
+  'Markdown',
+  '其他',
+] as const;
 const billingTabs = ['日账单', '产品账单', '请求明细'];
 const messageTabs = ['全部', '未读', '已读'];
 
@@ -101,6 +140,20 @@ const messageModeTabs = [
   { value: 'announcements', label: '公告' },
   { value: 'activity', label: '动态' },
 ] as const;
+
+function blurActiveInputControl() {
+  const activeElement = document.activeElement;
+
+  if (!(activeElement instanceof HTMLElement)) {
+    return;
+  }
+
+  if (
+    activeElement.matches('input, textarea, select, [contenteditable="true"]')
+  ) {
+    activeElement.blur();
+  }
+}
 
 const profilePresetAvatarSrcs = [
   '/assets/avatars/avatar-male-1.png',
@@ -214,6 +267,8 @@ const cards = [
   },
 ];
 
+type AgentCardData = (typeof cards)[number];
+
 const workflowCards = [
   {
     title: '一键生成线条艺术风格的PPT',
@@ -288,12 +343,102 @@ const previewWorkflowCards = [
   ...workflowCards,
 ];
 
+const projectFileIconBasePath = '/assets/project-files';
+
+const seededProjectFiles: MockProjectFile[] = [
+  {
+    name: '项目文件夹',
+    type: '文件夹',
+    date: '2026/07/28',
+    size: '24.80 GB',
+    icon: `${projectFileIconBasePath}/folder.svg`,
+  },
+  {
+    name: '文件夹压缩包.zip',
+    type: '压缩包',
+    date: '2026/07/18',
+    size: '8.42 GB',
+    icon: `${projectFileIconBasePath}/zip.svg`,
+  },
+  {
+    name: '产品文档.word',
+    type: '文档',
+    date: '2026/06/30',
+    size: '36.20 MB',
+    icon: `${projectFileIconBasePath}/word.svg`,
+  },
+  {
+    name: '财务报表.xlsx',
+    type: '表格',
+    date: '2026/06/12',
+    size: '18.74 MB',
+    icon: `${projectFileIconBasePath}/xlsx.svg`,
+  },
+  {
+    name: '公司简介.ppt',
+    type: '幻灯片',
+    date: '2026/05/26',
+    size: '128.60 MB',
+    icon: `${projectFileIconBasePath}/ppt.svg`,
+  },
+  {
+    name: '产品文档.pdf',
+    type: 'PDF',
+    date: '2026/05/08',
+    size: '9.86 MB',
+    icon: `${projectFileIconBasePath}/pdf.svg`,
+  },
+  {
+    name: '小狗图片.png',
+    type: '图片',
+    date: '2026/04/22',
+    size: '2.48 MB',
+    icon: `${projectFileIconBasePath}/pic.svg`,
+  },
+  {
+    name: '宣传视频.mp4',
+    type: '视频',
+    date: '2026/04/03',
+    size: '1.36 GB',
+    icon: `${projectFileIconBasePath}/video.svg`,
+  },
+  {
+    name: '口播配音.mp3',
+    type: '音频',
+    date: '2026/03/19',
+    size: '48.32 MB',
+    icon: `${projectFileIconBasePath}/audio.svg`,
+  },
+  {
+    name: '公司门户网站.html',
+    type: '链接',
+    date: '2026/03/01',
+    size: '856 KB',
+    icon: `${projectFileIconBasePath}/link.svg`,
+  },
+  {
+    name: '设计规范.md',
+    type: 'Markdown',
+    date: '2026/02/14',
+    size: '324 KB',
+    icon: `${projectFileIconBasePath}/md.svg`,
+  },
+  {
+    name: '不知名文件.js',
+    type: '其他',
+    date: '2026/01/28',
+    size: '72 KB',
+    icon: `${projectFileIconBasePath}/noname.svg`,
+  },
+];
+
 const projects: MockProject[] = [
   {
     id: 'classic-video',
     title: '经典版视频管家项目',
     count: 4,
     createdAt: '7月20日创建',
+    files: seededProjectFiles,
     items: [
       {
         title: '测评讲解视频',
@@ -331,6 +476,7 @@ const projects: MockProject[] = [
     title: '计算机速度优化智能体',
     count: 1,
     createdAt: '7月9日创建',
+    files: seededProjectFiles.slice(0, 4),
     items: [
       {
         title: '测评讲解视频',
@@ -346,6 +492,7 @@ const projects: MockProject[] = [
     title: '新项目01',
     count: 4,
     createdAt: '7月18日创建',
+    files: seededProjectFiles.slice(2, 8),
     items: [
       {
         title: '测评讲解视频',
@@ -382,6 +529,7 @@ const projects: MockProject[] = [
     title: '新项目02',
     count: 3,
     createdAt: '7月9日创建',
+    files: seededProjectFiles.slice(4, 10),
     items: [
       {
         title: '测评讲解视频',
@@ -411,6 +559,7 @@ const projects: MockProject[] = [
     title: '新项目03',
     count: 2,
     createdAt: '7月02日创建',
+    files: seededProjectFiles.slice(6, 12),
     items: [
       {
         title: '小红书投流视频',
@@ -433,6 +582,7 @@ const projects: MockProject[] = [
     title: '新项目04',
     count: 4,
     createdAt: '7月02日创建',
+    files: seededProjectFiles.slice(0, 8),
     items: [
       {
         title: '测评讲解视频',
@@ -469,6 +619,7 @@ const projects: MockProject[] = [
     title: '新项目05',
     count: 0,
     createdAt: '7月02日创建',
+    files: [],
     items: [],
   },
 ];
@@ -794,6 +945,7 @@ type MessageMode = MockMessageMode;
 type MessageUnreadCounts = Record<MessageMode, number>;
 type MessageItem = MockMessage;
 type ProjectItem = MockProjectItem;
+type ProjectFile = MockProjectFile;
 type PolicyTab = 'privacy' | 'agreement';
 
 const emptyMessageUnreadCounts: MessageUnreadCounts = {
@@ -804,6 +956,10 @@ const emptyUnreadMessageIds = new Set<string>();
 
 function getProjectTaskKey(item: ProjectItem) {
   return `${item.project}-${item.title}-${item.time}-${item.task}-${item.image}`;
+}
+
+function getProjectFileKey(file: ProjectFile) {
+  return `${file.name}-${file.type}-${file.date}-${file.size}`;
 }
 
 const profileMenuItems = [
@@ -1072,9 +1228,13 @@ function ProfilePopover({
   onLogoutClick: () => void;
 }) {
   return (
-    <div
+    <Popover
       ref={popoverRef}
-      className="fixed bottom-12 left-2 z-50 h-[328px] w-56 rounded-card bg-bg-white py-2 shadow-popover"
+      width={224}
+      position="fixed"
+      align="none"
+      offset={null}
+      className="bottom-12 left-2 z-50 h-[328px]"
     >
       <div className="flex h-[312px] w-full flex-col">
         {profileMenuItems.map((item) => (
@@ -1143,7 +1303,7 @@ function ProfilePopover({
           </div>
         </div>
       </div>
-    </div>
+    </Popover>
   );
 }
 
@@ -1179,8 +1339,13 @@ function MockDebugPanel({
         : '已登录有数据';
 
   return (
-    <div
-      className="fixed bottom-4 left-4 z-[80] w-[280px] rounded-card bg-bg-white p-3 text-sm leading-5 shadow-popover"
+    <Popover
+      width={280}
+      position="fixed"
+      align="none"
+      offset={null}
+      padding="none"
+      className="bottom-4 left-4 z-[80] p-3 text-sm leading-5"
       role="dialog"
       aria-label="Mock 调试"
     >
@@ -1253,7 +1418,7 @@ function MockDebugPanel({
           推送动态
         </Button>
       </div>
-    </div>
+    </Popover>
   );
 }
 
@@ -1605,11 +1770,12 @@ function ProjectDetailNavTitle({
   onDelete?: () => void;
 }) {
   const canOpenMenu = Boolean(onMenuToggle && onRename && onDelete);
+  const menuTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   return (
     <div className="relative flex h-14 items-center gap-1">
       <button
-        className="h-5 shrink-0 text-sm font-medium leading-5 text-[#999999] hover:text-[#666666] active:text-[#000000]"
+        className="h-5 shrink-0 text-sm font-medium leading-5 text-text-hint hover:text-text-secondary active:text-text-primary"
         type="button"
         onClick={onBack}
       >
@@ -1620,25 +1786,32 @@ function ProjectDetailNavTitle({
         {projectTitle}
       </h1>
       <button
+        ref={menuTriggerRef}
         className={[
           'flex h-6 w-6 shrink-0 items-center justify-center rounded-button transition-colors',
           isMenuOpen
-            ? 'bg-[#EAEAEA] text-text-primary'
-            : 'text-text-hint hover:bg-[#F3F3F3] hover:text-text-primary active:bg-[#EAEAEA] active:text-text-primary',
+            ? 'bg-bg-strong text-text-primary'
+            : 'text-text-hint hover:bg-bg-medium hover:text-text-primary active:bg-bg-strong active:text-text-primary',
         ].join(' ')}
         type="button"
         aria-label={`${projectTitle} 更多操作`}
         aria-expanded={isMenuOpen}
+        onPointerDown={(event) => {
+          blurActiveInputControl();
+          event.stopPropagation();
+          event.preventDefault();
+          onMenuToggle?.();
+        }}
         onClick={(event) => {
           event.stopPropagation();
-          onMenuToggle?.();
+          event.preventDefault();
         }}
       >
         <Icon name="Ellipsis" />
       </button>
       {isMenuOpen && canOpenMenu && (
         <ProjectCardMenu
-          className="right-0 top-11"
+          anchorRef={menuTriggerRef}
           ariaLabel={`${projectTitle}项目操作`}
           onRename={() => {
             onMenuClose?.();
@@ -1723,12 +1896,13 @@ function TitleBar({
   onProjectDetailDelete?: () => void;
 }) {
   const showLeftContent = showModeTabs || Boolean(projectDetailTitle);
+  const notificationTriggerRef = useRef<HTMLDivElement | null>(null);
 
   return (
     <header
       className={[
         'fixed right-0 top-0 z-30 flex h-14 shrink-0 items-center justify-end bg-bg-soft px-2 transition-[left] duration-200 ease-out',
-        sidebarCollapsed ? 'left-[52px]' : 'left-[240px]',
+        sidebarCollapsed ? 'left-[52px] min-w-[972px]' : 'left-[240px] min-w-[784px]',
         showDivider ? 'shadow-border-bottom-subtle' : '',
       ].join(' ')}
       onWheelCapture={(event) => event.preventDefault()}
@@ -1774,50 +1948,61 @@ function TitleBar({
       <div
         className={[
           'flex h-14 items-center',
-          isLoggedIn ? 'w-[178px]' : '',
+          isLoggedIn ? 'w-[184px]' : '',
         ].join(' ')}
       >
-        <div className="flex h-14 w-[130px] items-center gap-3 px-1">
-          <button
-            className={[
-              'relative flex h-8 w-8 items-center justify-center rounded-pill shadow-border-strong',
-              notificationOpen
-                ? 'bg-bg-strong'
-                : 'bg-transparent hover:bg-bg-medium active:bg-bg-strong',
-            ].join(' ')}
-            type="button"
-            aria-label="通知"
-            aria-expanded={notificationOpen}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={onNotificationToggle}
-          >
-            <Icon name="Bell" />
+        <div className="flex h-14 items-center gap-3 px-1">
+          <div ref={notificationTriggerRef} className="relative h-8 w-8 shrink-0">
+            <IconButton
+              name="Bell"
+              variant="secondary"
+              surface="soft"
+              shape="pill"
+              size="md"
+              selected={notificationOpen}
+              aria-label="通知"
+              aria-expanded={notificationOpen}
+              onPointerDown={(event) => {
+                blurActiveInputControl();
+                event.stopPropagation();
+                event.preventDefault();
+                onNotificationToggle();
+              }}
+              onClick={(event) => {
+                event.stopPropagation();
+                event.preventDefault();
+              }}
+            />
             {messageUnreadCount > 0 && (
               <span className="absolute right-px top-px h-1.5 w-1.5 rounded-pill bg-accent-red" />
             )}
-          </button>
+          </div>
           {notificationOpen && (
             <NotificationPopover
-              messageMode={notificationMode}
+              tabs={messageModeTabs}
+              value={notificationMode}
               messagesByMode={messagesByMode}
               unreadCounts={messageUnreadCounts}
               unreadMessageIds={unreadMessageIds}
               isLoggedIn={isLoggedIn}
-              onMessageModeChange={onNotificationModeChange}
+              anchorRef={notificationTriggerRef}
+              onValueChange={onNotificationModeChange}
               onMessageClick={onNotificationMessageClick}
               onMarkAllRead={onNotificationMarkAllRead}
               onAllMessagesClick={onNotificationAllMessagesClick}
               onClose={onNotificationClose}
             />
           )}
-          <button
-            className="flex h-8 w-[78px] shrink-0 items-center gap-1 rounded-pill bg-button-notice py-1.5 pl-3.5 pr-4 text-sm text-text-inverse transition hover:bg-button-notice-hover active:bg-button-notice-active"
-            type="button"
+          <Button
+            className="w-[90px] whitespace-nowrap px-3.5 pr-4"
+            variant="notice"
+            size="md"
+            shape="pill"
+            icon="Plus"
             onClick={onRechargeClick}
           >
-            <Icon name="Plus" />
-            <span className="whitespace-nowrap">充值</span>
-          </button>
+            充值
+          </Button>
         </div>
         <div
           className={[
@@ -1834,15 +2019,16 @@ function TitleBar({
               />
             </div>
           ) : (
-            <button
-              className="flex h-8 shrink-0 items-center justify-center whitespace-nowrap rounded-pill bg-button-primary px-4 text-sm leading-5 text-text-inverse transition hover:bg-button-primary-hover active:bg-button-primary-active"
-              type="button"
+            <Button
+              className="h-8 whitespace-nowrap px-4"
+              size="md"
+              shape="pill"
               onClick={onLoginClick}
             >
               <span>登录</span>
               <span className="-mx-0.5">／</span>
               <span>注册</span>
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -1850,176 +2036,6 @@ function TitleBar({
   );
 }
 
-function NotificationPopover({
-  messageMode,
-  messagesByMode,
-  unreadCounts,
-  unreadMessageIds,
-  isLoggedIn,
-  onMessageModeChange,
-  onMessageClick,
-  onMarkAllRead,
-  onAllMessagesClick,
-  onClose,
-}: {
-  messageMode: MessageMode;
-  messagesByMode: MockMessageByMode;
-  unreadCounts: MessageUnreadCounts;
-  unreadMessageIds: Set<string>;
-  isLoggedIn: boolean;
-  onMessageModeChange: (value: MessageMode) => void;
-  onMessageClick: (messageMode: MessageMode, messageId: string) => void;
-  onMarkAllRead: (messageMode: MessageMode) => void;
-  onAllMessagesClick: () => void;
-  onClose: () => void;
-}) {
-  const popoverRef = useRef<HTMLDivElement | null>(null);
-  const popoverMessages = isLoggedIn ? messagesByMode[messageMode] : [];
-  const currentUnreadCount = isLoggedIn ? unreadCounts[messageMode] : 0;
-
-  useEffect(() => {
-    function handlePointerDown(event: PointerEvent) {
-      const target = event.target;
-
-      if (
-        target instanceof Node &&
-        popoverRef.current?.contains(target)
-      ) {
-        return;
-      }
-
-      onClose();
-    }
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    }
-
-    window.addEventListener('pointerdown', handlePointerDown);
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('pointerdown', handlePointerDown);
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [onClose]);
-
-  return (
-    <div
-      ref={popoverRef}
-      className="fixed right-[150px] top-12 z-40 flex max-h-[calc(100vh-96px)] min-h-[196px] w-[400px] flex-col rounded-card bg-bg-white py-2 shadow-popover"
-      role="dialog"
-      aria-label="消息通知"
-      onClick={(event) => event.stopPropagation()}
-    >
-      <div className="flex h-9 w-full items-center px-4">
-        <div className="flex h-9 w-full items-center gap-4">
-          {messageModeTabs.map((tab) => {
-            const isActive = messageMode === tab.value;
-            const badge = unreadCounts[tab.value];
-
-            return (
-              <button
-                key={tab.value}
-                className={[
-                  'flex h-9 items-center gap-1 text-sm leading-5',
-                  isActive
-                    ? 'font-medium text-text-primary'
-                    : 'font-normal text-text-hint hover:text-text-secondary active:text-text-primary',
-                ].join(' ')}
-                type="button"
-                onClick={() => onMessageModeChange(tab.value)}
-              >
-                <span>{tab.label}</span>
-                {badge !== undefined && badge > 0 && (
-                  <span className="flex h-4 min-w-4 items-center justify-center rounded-pill bg-accent-red px-1 text-xs leading-4 text-text-inverse">
-                    {badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-      <div className="flex h-4 items-center px-4">
-        <div className="h-px w-full bg-border-subtle" />
-      </div>
-      <div className="scrollbar-none flex min-h-0 flex-1 flex-col overflow-y-auto">
-        {popoverMessages.length === 0 ? (
-          <div className="flex h-[110px] items-center justify-center px-4 text-sm leading-5 text-text-hint">
-            <span className="flex items-center gap-2">
-              <Icon
-                name={isLoggedIn ? 'FolderMinus' : 'MailOpen'}
-                className="shrink-0"
-              />
-              <span>暂无消息</span>
-            </span>
-          </div>
-        ) : popoverMessages.map((message) => {
-          const isUnread = unreadMessageIds.has(message.id);
-
-          return (
-            <button
-              key={message.id}
-              className="group flex h-10 w-full items-center px-2 text-left"
-              type="button"
-              onClick={() => onMessageClick(messageMode, message.id)}
-            >
-              <span className="flex h-9 min-w-0 flex-1 items-center rounded-button px-2 hover:bg-bg-soft active:bg-bg-medium">
-                <span
-                  className={[
-                    'h-1.5 w-1.5 shrink-0 rounded-pill',
-                    isUnread ? 'bg-accent-red' : 'bg-bg-strong',
-                  ].join(' ')}
-                />
-                <span
-                  className={[
-                    'ml-2 min-w-0 flex-1 truncate text-sm leading-5 text-text-primary',
-                    isUnread ? 'font-medium' : 'font-normal',
-                  ].join(' ')}
-                >
-                  {message.title}
-                </span>
-                <time className="ml-2 shrink-0 text-xs leading-4 text-text-hint group-hover:hidden">
-                  {message.time}
-                </time>
-                <Icon
-                  name="ChevronRight"
-                  className="ml-2 hidden shrink-0 text-text-secondary group-hover:block"
-                />
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      <div className="flex h-3 items-center px-4">
-        <div className="h-px w-full bg-border-subtle" />
-      </div>
-      <div className="flex h-9 items-center px-4">
-        <div className="flex h-9 w-full items-center justify-between">
-          <button
-            className="h-5 rounded-button text-sm leading-5 text-text-secondary hover:text-text-primary active:text-text-primary disabled:pointer-events-none disabled:text-text-disabled"
-            type="button"
-            disabled={currentUnreadCount === 0}
-            onClick={() => onMarkAllRead(messageMode)}
-          >
-            全部已读
-          </button>
-          <button
-            className="group flex h-5 items-center rounded-button text-sm leading-5 text-text-secondary hover:text-text-primary active:text-text-primary"
-            type="button"
-            onClick={onAllMessagesClick}
-          >
-            <span>全部消息</span>
-            <Icon name="ChevronRight" className="text-text-secondary group-hover:text-text-primary group-active:text-text-primary" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 function HeroBanner() {
   const [activeBannerIndex, setActiveBannerIndex] = useState(0);
@@ -2150,7 +2166,7 @@ function HeroBanner() {
 
 function HeroSection() {
   return (
-    <section className="flex h-[246px] gap-4 px-12 pb-6 pt-0.5">
+    <section className="page-section-x flex h-[246px] gap-4 pb-6 pt-0.5">
       <HeroBanner />
       <div className="flex h-[220px] min-w-0 flex-1 gap-4">
         <div className="group relative h-full min-w-0 flex-1 overflow-hidden rounded-xl">
@@ -2185,99 +2201,20 @@ function InvoiceModal({
   closeLabel?: string;
   onClose: () => void;
 }) {
-  const [isVisible, setIsVisible] = useState(false);
-  const closeTimerRef = useRef<number | null>(null);
-  const onCloseRef = useRef(onClose);
-
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-
-  const closeWithAnimation = useCallback(() => {
-    setIsVisible(false);
-
-    if (closeTimerRef.current !== null) {
-      window.clearTimeout(closeTimerRef.current);
-    }
-
-    closeTimerRef.current = window.setTimeout(() => {
-      onCloseRef.current();
-    }, 180);
-  }, []);
-
-  useEffect(() => {
-    const animationFrame = window.requestAnimationFrame(() => {
-      setIsVisible(true);
-    });
-
-    return () => {
-      window.cancelAnimationFrame(animationFrame);
-    };
-  }, []);
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        closeWithAnimation();
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-
-      if (closeTimerRef.current !== null) {
-        window.clearTimeout(closeTimerRef.current);
-      }
-    };
-  }, [closeWithAnimation]);
-
   return (
-    <div
-      className={[
-        'fixed inset-0 z-50 flex items-center justify-center bg-bg-black/60 transition-opacity duration-200 ease-out',
-        isVisible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
-      ].join(' ')}
-      role="presentation"
-      onClick={closeWithAnimation}
-    >
-      <div
-        className={[
-          'relative flex w-[360px] flex-col items-center gap-4 overflow-hidden rounded-modal bg-bg-white p-8 shadow-card-hover transition-all duration-200 ease-out',
-          isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
-        ].join(' ')}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="invoice-modal-title"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="absolute right-0 top-0 flex h-14 w-14 items-start justify-end pb-2 pl-2 pr-4 pt-4">
-          <button
-            className="flex h-8 w-8 items-center justify-center rounded-button hover:bg-bg-soft active:bg-bg-medium"
-            type="button"
-            aria-label={closeLabel}
-            onClick={closeWithAnimation}
-          >
-            <Icon name="X" />
-          </button>
-        </div>
-        <h2
-          id="invoice-modal-title"
-          className="min-w-full text-center text-base font-medium leading-6 text-text-primary"
-        >
-          {title}
-        </h2>
+    <InfoModal
+      title={title}
+      closeLabel={closeLabel}
+      description={description}
+      media={
         <img
           className="h-56 w-56 shrink-0 object-cover"
           src="/assets/home/invoice-qr.png"
           alt=""
         />
-        <p className="min-w-full text-center text-sm leading-5 text-text-hint">
-          {description}
-        </p>
-      </div>
-    </div>
+      }
+      onClose={onClose}
+    />
   );
 }
 
@@ -2303,6 +2240,7 @@ function ProfileModal({
   const [nicknameHasError, setNicknameHasError] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const closeTimerRef = useRef<number | null>(null);
+  const overlayPointerStartedRef = useRef(false);
   const canSaveProfile = draftNickname.trim().length > 0;
 
   const handleAvatarFileChange = useCallback(
@@ -2384,11 +2322,23 @@ function ProfileModal({
         isVisible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
       ].join(' ')}
       role="presentation"
-      onClick={requestClose}
+      onPointerDown={(event) => {
+        overlayPointerStartedRef.current = event.target === event.currentTarget;
+      }}
+      onClick={(event) => {
+        if (
+          overlayPointerStartedRef.current &&
+          event.target === event.currentTarget
+        ) {
+          requestClose();
+        }
+
+        overlayPointerStartedRef.current = false;
+      }}
     >
       <div
         className={[
-          'flex w-[480px] flex-col items-center overflow-hidden rounded-modal bg-bg-white shadow-card-hover transition-all duration-200 ease-out',
+          'flex w-[480px] shrink-0 flex-col items-center overflow-hidden rounded-modal bg-bg-white shadow-card-hover transition-all duration-200 ease-out',
           isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
         ].join(' ')}
         role="dialog"
@@ -2405,14 +2355,7 @@ function ProfileModal({
               个人资料
             </h2>
           </div>
-          <button
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-button hover:bg-bg-soft active:bg-bg-medium"
-            type="button"
-            aria-label="关闭个人资料弹窗"
-            onClick={requestClose}
-          >
-            <Icon name="X" />
-          </button>
+          <ModalCloseButton aria-label="关闭个人资料弹窗" onClick={requestClose} />
         </div>
 
         <div className="flex w-full flex-col items-start justify-center gap-4 px-6 py-4">
@@ -2460,8 +2403,8 @@ function ProfileModal({
                   className={[
                     'flex shrink-0 items-center justify-center rounded-pill p-1 transition-shadow',
                     isSelected
-                      ? 'shadow-[inset_0_0_0_1px_#000]'
-                      : 'hover:shadow-[inset_0_0_0_1px_#E5E5E5] active:shadow-[inset_0_0_0_1px_#000]',
+                      ? 'shadow-border-selected'
+                      : 'hover:shadow-border-strong active:shadow-border-selected',
                   ].join(' ')}
                   type="button"
                   aria-label="选择默认头像"
@@ -2485,31 +2428,20 @@ function ProfileModal({
             >
               用户昵称
             </label>
-            <div
-              className={[
-                'flex w-full items-center gap-2 rounded-button px-4 py-2.5 text-sm leading-5 transition-shadow',
-                nicknameHasError
-                  ? 'shadow-[inset_0_0_0_1px_#FF5C4D]'
-                  : 'shadow-border-strong focus-within:shadow-border-selected',
-              ].join(' ')}
-            >
-              <input
-                id="profile-nickname"
-                className="min-w-0 flex-1 bg-transparent text-text-primary outline-none placeholder:text-text-placeholder"
-                value={draftNickname}
-                placeholder="起个好听的昵称吧！"
-                maxLength={15}
-                onChange={(event) => {
-                  const nextNickname = event.target.value;
-
-                  setDraftNickname(nextNickname);
-                  if (nicknameHasError && nextNickname.trim().length > 0) {
-                    setNicknameHasError(false);
-                  }
-                }}
-              />
-              <span className="shrink-0 text-text-hint">{draftNickname.length}/15</span>
-            </div>
+            <CounterInput
+              id="profile-nickname"
+              className="w-full"
+              value={draftNickname}
+              placeholder="起个好听的昵称吧！"
+              maxLength={15}
+              error={nicknameHasError}
+              onValueChange={(nextNickname) => {
+                setDraftNickname(nextNickname);
+                if (nicknameHasError && nextNickname.trim().length > 0) {
+                  setNicknameHasError(false);
+                }
+              }}
+            />
             <p
               className={[
                 'w-full text-xs leading-4',
@@ -2553,6 +2485,7 @@ function PolicyModal({
     agreement: '',
   });
   const closeTimerRef = useRef<number | null>(null);
+  const overlayPointerStartedRef = useRef(false);
   const policyTabs: ReadonlyArray<{ value: PolicyTab; label: string }> = [
     { value: 'privacy', label: '隐私政策' },
     { value: 'agreement', label: '服务条款' },
@@ -2650,11 +2583,23 @@ function PolicyModal({
         isVisible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
       ].join(' ')}
       role="presentation"
-      onClick={closeWithAnimation}
+      onPointerDown={(event) => {
+        overlayPointerStartedRef.current = event.target === event.currentTarget;
+      }}
+      onClick={(event) => {
+        if (
+          overlayPointerStartedRef.current &&
+          event.target === event.currentTarget
+        ) {
+          closeWithAnimation();
+        }
+
+        overlayPointerStartedRef.current = false;
+      }}
     >
       <div
         className={[
-          'flex h-[640px] w-[720px] flex-col items-center overflow-hidden rounded-modal bg-bg-white shadow-[0_8px_12px_rgb(0_0_0_/_0.05),0_0_12px_rgb(0_0_0_/_0.05)] transition-all duration-200 ease-out',
+          'flex h-[640px] w-[720px] shrink-0 flex-col items-center overflow-hidden rounded-modal bg-bg-white shadow-[0_8px_12px_rgb(0_0_0_/_0.05),0_0_12px_rgb(0_0_0_/_0.05)] transition-all duration-200 ease-out',
           isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
         ].join(' ')}
         role="dialog"
@@ -2685,14 +2630,7 @@ function PolicyModal({
               );
             })}
           </div>
-          <button
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-button hover:bg-bg-soft active:bg-bg-medium"
-            type="button"
-            aria-label="关闭政策协议弹窗"
-            onClick={closeWithAnimation}
-          >
-            <Icon name="X" />
-          </button>
+          <ModalCloseButton aria-label="关闭政策协议弹窗" onClick={closeWithAnimation} />
         </div>
 
         <div className="relative flex min-h-0 w-full flex-1 items-start overflow-hidden px-6">
@@ -2715,115 +2653,15 @@ function MarkAllReadModal({
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  const [isVisible, setIsVisible] = useState(false);
-  const closeTimerRef = useRef<number | null>(null);
-
-  const closeWithAnimation = useCallback(() => {
-    setIsVisible(false);
-
-    if (closeTimerRef.current !== null) {
-      window.clearTimeout(closeTimerRef.current);
-    }
-
-    closeTimerRef.current = window.setTimeout(() => {
-      onClose();
-    }, 180);
-  }, [onClose]);
-
-  useEffect(() => {
-    const animationFrame = window.requestAnimationFrame(() => {
-      setIsVisible(true);
-    });
-
-    return () => {
-      window.cancelAnimationFrame(animationFrame);
-    };
-  }, []);
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        closeWithAnimation();
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-
-      if (closeTimerRef.current !== null) {
-        window.clearTimeout(closeTimerRef.current);
-      }
-    };
-  }, [closeWithAnimation]);
-
   return (
-    <div
-      className={[
-        'fixed inset-0 z-50 flex items-center justify-center bg-bg-black/60 transition-opacity duration-200 ease-out',
-        isVisible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
-      ].join(' ')}
-      role="presentation"
-      onClick={closeWithAnimation}
-    >
-      <div
-        className={[
-          'flex h-[184px] w-[480px] flex-col overflow-hidden rounded-modal bg-bg-white shadow-card-hover transition-all duration-200 ease-out',
-          isVisible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-2 scale-95 opacity-0',
-        ].join(' ')}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="mark-all-read-title"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex h-14 items-start gap-2 pl-6 pr-4 pb-2 pt-4">
-          <div className="flex h-8 min-w-0 flex-1 items-center">
-            <h2
-              id="mark-all-read-title"
-              className="min-w-0 flex-1 truncate text-base font-medium leading-6 text-text-primary"
-            >
-              全部标记为已读？
-            </h2>
-          </div>
-          <button
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-button hover:bg-bg-soft active:bg-bg-medium"
-            type="button"
-            aria-label="关闭全部已读提示"
-            onClick={closeWithAnimation}
-          >
-            <Icon name="X" />
-          </button>
-        </div>
-        <div className="flex h-[52px] items-center px-6 py-4">
-          <p className="truncate text-sm leading-5 text-text-primary">
-            确保重要消息已查看，不要漏了哦！
-          </p>
-        </div>
-        <div className="flex h-[76px] items-start justify-end px-6 pb-6 pt-4">
-          <div className="flex h-9 items-center gap-2">
-            <Button
-              className="h-9 w-16 px-[18px]"
-              variant="secondary"
-              size="lg"
-              onClick={closeWithAnimation}
-            >
-            取消
-            </Button>
-            <Button
-              className="h-9 w-[92px] px-[18px]"
-              size="lg"
-              onClick={() => {
-                onConfirm();
-                closeWithAnimation();
-              }}
-            >
-              全部已读
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <ConfirmModal
+      title="全部标记为已读？"
+      description="确保重要消息已查看，不要漏了哦！"
+      confirmText="全部已读"
+      closeLabel="关闭全部已读提示"
+      onClose={onClose}
+      onConfirm={onConfirm}
+    />
   );
 }
 
@@ -2834,121 +2672,16 @@ function LogoutConfirmModal({
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  const [isVisible, setIsVisible] = useState(false);
-  const closeTimerRef = useRef<number | null>(null);
-  const onCloseRef = useRef(onClose);
-
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-
-  const closeWithAnimation = useCallback(() => {
-    setIsVisible(false);
-
-    if (closeTimerRef.current !== null) {
-      window.clearTimeout(closeTimerRef.current);
-    }
-
-    closeTimerRef.current = window.setTimeout(() => {
-      onCloseRef.current();
-    }, 180);
-  }, []);
-
-  useEffect(() => {
-    const animationFrame = window.requestAnimationFrame(() => {
-      setIsVisible(true);
-    });
-
-    return () => {
-      window.cancelAnimationFrame(animationFrame);
-    };
-  }, []);
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        closeWithAnimation();
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-
-      if (closeTimerRef.current !== null) {
-        window.clearTimeout(closeTimerRef.current);
-      }
-    };
-  }, [closeWithAnimation]);
-
   return (
-    <div
-      className={[
-        'fixed inset-0 z-50 flex items-center justify-center bg-bg-black/60 transition-opacity duration-200 ease-out',
-        isVisible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
-      ].join(' ')}
-      role="presentation"
-      onClick={closeWithAnimation}
-    >
-      <div
-        className={[
-          'flex h-[184px] w-[480px] flex-col overflow-hidden rounded-modal bg-bg-white shadow-card-hover transition-all duration-200 ease-out',
-          isVisible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-2 scale-95 opacity-0',
-        ].join(' ')}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="logout-confirm-title"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex h-14 items-start gap-2 pl-6 pr-4 pb-2 pt-4">
-          <div className="flex h-8 min-w-0 flex-1 items-center">
-            <h2
-              id="logout-confirm-title"
-              className="min-w-0 flex-1 truncate text-base font-medium leading-6 text-text-primary"
-            >
-              退出登录？
-            </h2>
-          </div>
-          <button
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-button hover:bg-bg-soft active:bg-bg-medium"
-            type="button"
-            aria-label="关闭退出登录提示"
-            onClick={closeWithAnimation}
-          >
-            <Icon name="X" />
-          </button>
-        </div>
-        <div className="flex h-[52px] items-center px-6 py-4">
-          <p className="truncate text-sm leading-5 text-text-primary">
-            退出后无法继续使用 Hellome
-          </p>
-        </div>
-        <div className="flex h-[76px] items-start justify-end px-6 pb-6 pt-4">
-          <div className="flex h-9 items-center gap-2">
-            <Button
-              className="h-9 w-16 px-[18px]"
-              variant="secondary"
-              size="lg"
-              onClick={closeWithAnimation}
-            >
-              取消
-            </Button>
-            <Button
-              className="h-9 w-[92px] px-[18px]"
-              variant="warning"
-              size="lg"
-              onClick={() => {
-                onConfirm();
-                closeWithAnimation();
-              }}
-            >
-              退出登录
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <ConfirmModal
+      title="退出登录？"
+      description="退出后无法继续使用 Hellome"
+      confirmText="退出登录"
+      confirmVariant="warning"
+      closeLabel="关闭退出登录提示"
+      onClose={onClose}
+      onConfirm={onConfirm}
+    />
   );
 }
 
@@ -2970,34 +2703,10 @@ const rechargeOptions: RechargeOption[] = [
 ];
 
 function RechargeModal({ onClose }: { onClose: () => void }) {
-  const [isVisible, setIsVisible] = useState(false);
   const [selectedAmount, setSelectedAmount] = useState(100);
   const [qrExpiresIn, setQrExpiresIn] = useState(60);
   const [qrRefreshVersion, setQrRefreshVersion] = useState(0);
-  const closeTimerRef = useRef<number | null>(null);
   const isQrExpired = qrExpiresIn === 0;
-
-  const closeWithAnimation = useCallback(() => {
-    setIsVisible(false);
-
-    if (closeTimerRef.current !== null) {
-      window.clearTimeout(closeTimerRef.current);
-    }
-
-    closeTimerRef.current = window.setTimeout(() => {
-      onClose();
-    }, 180);
-  }, [onClose]);
-
-  useEffect(() => {
-    const animationFrame = window.requestAnimationFrame(() => {
-      setIsVisible(true);
-    });
-
-    return () => {
-      window.cancelAnimationFrame(animationFrame);
-    };
-  }, []);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -3009,43 +2718,17 @@ function RechargeModal({ onClose }: { onClose: () => void }) {
     };
   }, []);
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        closeWithAnimation();
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-
-      if (closeTimerRef.current !== null) {
-        window.clearTimeout(closeTimerRef.current);
-      }
-    };
-  }, [closeWithAnimation]);
-
   return (
-    <div
-      className={[
-        'fixed inset-0 z-50 flex items-center justify-center bg-bg-black/60 transition-opacity duration-200 ease-out',
-        isVisible ? 'opacity-100' : 'opacity-0',
-      ].join(' ')}
-      role="presentation"
-      onClick={closeWithAnimation}
+    <WorkflowModal
+      ariaLabelledBy="recharge-modal-title"
+      showCloseButton={false}
+      bodyPadding={false}
+      panelClassName="h-[560px]"
+      bodyClassName="h-full"
+      onClose={onClose}
     >
-      <div
-        className={[
-          'relative flex h-[560px] w-[960px] items-start overflow-hidden rounded-modal bg-bg-white shadow-card-hover transition-all duration-200 ease-out',
-          isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
-        ].join(' ')}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="recharge-modal-title"
-        onClick={(event) => event.stopPropagation()}
-      >
+      {({ close }) => (
+      <div className="relative flex h-full items-start overflow-hidden">
         <div className="relative flex h-full min-w-0 flex-1 flex-col items-center gap-6 overflow-hidden p-10">
           <div className="pointer-events-none absolute left-0 top-0 h-[152px] w-[680px] overflow-hidden">
             <img
@@ -3171,17 +2854,15 @@ function RechargeModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
         <div className="absolute right-0 top-0 flex items-center justify-end pb-2 pl-2 pr-4 pt-4">
-          <button
-            className="flex h-8 w-8 items-center justify-center rounded-button hover:bg-bg-soft active:bg-bg-medium"
-            type="button"
+          <ModalCloseButton
+            surface="soft"
             aria-label="关闭充值弹窗"
-            onClick={closeWithAnimation}
-          >
-            <Icon name="X" />
-          </button>
+            onClick={close}
+          />
         </div>
       </div>
-    </div>
+      )}
+    </WorkflowModal>
   );
 }
 
@@ -3195,7 +2876,7 @@ function AccountOverviewCards({
   onRechargeClick: () => void;
 }) {
   return (
-    <section className="px-12 py-6">
+    <section className="page-section-x py-6">
       <div className="grid grid-cols-2 gap-4">
         {stats.map((stat) => (
           <article
@@ -3302,10 +2983,12 @@ function DatePickerPopover({
   value,
   onValueChange,
   onClose,
+  anchorRef,
 }: {
   value: string;
   onValueChange: (value: string) => void;
   onClose: () => void;
+  anchorRef: RefObject<HTMLElement | null>;
 }) {
   const [visibleMonth, setVisibleMonth] = useState(() => parseDateValue(value));
   const selectedDate = parseDateValue(value);
@@ -3331,9 +3014,15 @@ function DatePickerPopover({
   ];
 
   return (
-    <div
+    <Popover
       data-account-filter-popover="true"
-      className="absolute left-0 top-9 z-40 w-[280px] rounded-card bg-bg-white p-3 shadow-popover"
+      width={280}
+      padding="none"
+      anchorRef={anchorRef}
+      align="auto"
+      placement="auto"
+      constrainHeight={false}
+      className="p-3"
     >
       <div className="flex h-10 items-center justify-between">
         <div className="flex h-10 w-10 items-center justify-center">
@@ -3413,7 +3102,7 @@ function DatePickerPopover({
           );
         })}
       </div>
-    </div>
+    </Popover>
   );
 }
 
@@ -3432,9 +3121,12 @@ function DateFilterButton({
   onClose: () => void;
   width: number;
 }) {
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+
   return (
     <div className="relative h-8 flex-none" style={{ width }}>
       <button
+        ref={triggerRef}
         data-account-filter-trigger="true"
         className={[
           'flex h-8 w-full items-center gap-2 rounded-button px-4 py-2 text-sm leading-5 text-text-primary shadow-border-strong active:bg-bg-strong',
@@ -3442,6 +3134,7 @@ function DateFilterButton({
         ].join(' ')}
         type="button"
         onPointerDown={(event) => {
+          blurActiveInputControl();
           event.preventDefault();
           onToggle();
         }}
@@ -3469,6 +3162,7 @@ function DateFilterButton({
           value={value}
           onValueChange={onValueChange}
           onClose={onClose}
+          anchorRef={triggerRef}
         />
       )}
     </div>
@@ -3480,56 +3174,60 @@ function SelectOptionPopover<T extends string>({
   value,
   onValueChange,
   widthClassName = 'w-[220px]',
-  align = 'left',
+  align = 'auto',
+  anchorRef,
 }: {
   options: readonly T[];
   value: T;
   onValueChange: (value: T) => void;
   widthClassName?: string;
-  align?: 'left' | 'right';
+  align?: 'auto' | 'left' | 'right';
+  anchorRef?: RefObject<HTMLElement | null>;
 }) {
+  const widthByClassName: Record<string, PopoverOptionsWidth> = {
+    'w-40': 'sm',
+    'w-[160px]': 'sm',
+    'w-[220px]': 'md',
+  };
+  const width = widthByClassName[widthClassName] ?? 'md';
+
   return (
-    <div
+    <PopoverOptions
       data-account-filter-popover="true"
-      className={[
-        'absolute top-9 z-40 rounded-card bg-bg-white py-2 shadow-popover',
-        align === 'right' ? 'right-0' : 'left-0',
-        widthClassName,
-      ].join(' ')}
+      width={width}
+      align={align}
+      anchorRef={anchorRef}
     >
       {options.map((option) => {
         const selected = option === value;
 
         return (
-          <button
-            key={option}
-            className="flex h-9 w-full items-center px-2 text-left"
-            type="button"
-            onClick={() => onValueChange(option)}
-          >
-            <span className="flex h-9 min-w-0 flex-1 items-center justify-between rounded-button px-2 text-sm leading-5 text-text-primary hover:bg-bg-soft active:bg-bg-medium">
-              <span className="truncate">{option}</span>
-              {selected && <Icon name="Check" className="shrink-0" />}
-            </span>
-          </button>
+          <PopoverSection key={option}>
+            <PopoverItem selected={selected} onClick={() => onValueChange(option)}>
+              {option}
+            </PopoverItem>
+          </PopoverSection>
         );
       })}
-    </div>
+    </PopoverOptions>
   );
 }
 
 function AccountKeyPopover({
   value,
   onValueChange,
+  anchorRef,
 }: {
   value: (typeof accountKeyOptions)[number];
   onValueChange: (value: (typeof accountKeyOptions)[number]) => void;
+  anchorRef?: RefObject<HTMLElement | null>;
 }) {
   return (
     <SelectOptionPopover
       options={accountKeyOptions}
       value={value}
       onValueChange={onValueChange}
+      anchorRef={anchorRef}
     />
   );
 }
@@ -3553,6 +3251,7 @@ function AccountFilterBar({
     useState<(typeof accountKeyOptions)[number]>('全部APIKey');
   const filterBarRef = useRef<HTMLDivElement>(null);
   const apiKeyMeasureRef = useRef<HTMLSpanElement>(null);
+  const apiKeyTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [filterLayout, setFilterLayout] = useState({
     apiKeyWidth: 100,
     dateWidth: 160,
@@ -3680,7 +3379,7 @@ function AccountFilterBar({
   }, [openFilterPopover]);
 
   return (
-      <section className="sticky top-14 z-20 bg-bg-soft px-12">
+      <section className="page-section-x sticky top-14 z-20 bg-bg-soft">
         <div className="account-billing-tabs-bar flex items-center shadow-border-bottom-default">
           <BillingTabs
             activeTab={activeTab}
@@ -3740,6 +3439,7 @@ function AccountFilterBar({
               style={{ width: filterLayout.apiKeyWidth }}
             >
               <button
+                ref={apiKeyTriggerRef}
                 data-account-filter-trigger="true"
                 className={[
                   'flex h-8 w-full items-center gap-2 rounded-button px-4 py-2 text-sm leading-5 text-text-primary shadow-border-strong active:bg-bg-strong',
@@ -3747,6 +3447,7 @@ function AccountFilterBar({
                 ].join(' ')}
                 type="button"
                 onPointerDown={(event) => {
+                  blurActiveInputControl();
                   event.preventDefault();
                   setOpenFilterPopover((currentPopover) =>
                     currentPopover === 'apiKey' ? null : 'apiKey',
@@ -3774,6 +3475,7 @@ function AccountFilterBar({
               {openFilterPopover === 'apiKey' && (
                 <AccountKeyPopover
                   value={selectedApiKey}
+                  anchorRef={apiKeyTriggerRef}
                   onValueChange={(value) => {
                     setSelectedApiKey(value);
                     setOpenFilterPopover(null);
@@ -3856,6 +3558,7 @@ function StickyHeader({
         : '搜索工作流';
   const [openSortFilter, setOpenSortFilter] = useState(false);
   const [selectedSortFilter, setSelectedSortFilter] = useState<string>('最热');
+  const sortFilterTriggerRef = useRef<HTMLDivElement | null>(null);
   const activeSortFilterOptions =
     activePage === 'projects' ? projectSortFilterOptions : sortFilterOptions;
   const activeSortFilterValue = activeSortFilterOptions.includes(
@@ -3896,7 +3599,7 @@ function StickyHeader({
   if (activePage === 'account') {
     return (
       <>
-        <section className="px-12">
+        <section className="page-section-x">
           <div className="flex h-[76px] items-center shadow-border-bottom-default">
             <h1 className="text-lg font-medium leading-7 text-text-primary">
               计费明细
@@ -3920,7 +3623,7 @@ function StickyHeader({
 
   return (
     <>
-      <section className="px-12">
+      <section className="page-section-x">
         <div
           className={[
             'flex border-b border-border-default',
@@ -3955,7 +3658,7 @@ function StickyHeader({
         </div>
       </section>
 
-      <section className="sticky top-14 z-20 px-12 bg-bg-soft">
+      <section className="page-section-x sticky top-14 z-20 bg-bg-soft">
         <div
           className="home-filter-bar flex items-center justify-between gap-4"
         >
@@ -3976,31 +3679,29 @@ function StickyHeader({
             ].join(' ')}
           >
             {activePage === 'messages' && activeTab !== '已读' && (
-              <button
-                className="flex h-8 shrink-0 items-center justify-center rounded-button px-2 text-text-secondary hover:bg-bg-medium hover:text-text-primary active:bg-bg-strong active:text-text-primary disabled:pointer-events-none disabled:text-text-disabled"
-                type="button"
+              <ToolbarIconButton
+                name="MailCheck"
+                surface="soft"
                 aria-label="全部已读"
                 title="全部已读"
                 disabled={!canMarkAllRead}
                 onClick={onMarkAllReadClick}
-              >
-                <Icon name="MailCheck" />
-              </button>
+              />
             )}
             {activePage !== 'messages' && (
-              <div className="relative flex h-8 w-8 items-center">
-                <button
+              <div
+                ref={sortFilterTriggerRef}
+                className="relative flex h-8 w-8 items-center"
+              >
+                <ToolbarIconButton
                   data-sort-filter-trigger="true"
-                  className={[
-                    'flex h-8 w-8 items-center justify-center rounded-button',
-                    openSortFilter
-                      ? 'bg-bg-strong text-text-primary'
-                      : 'text-text-secondary hover:bg-bg-medium hover:text-text-primary active:bg-bg-strong active:text-text-primary',
-                  ].join(' ')}
-                  type="button"
+                  name="ListFilter"
+                  surface="soft"
+                  selected={openSortFilter}
                   aria-label="筛选"
                   aria-expanded={openSortFilter}
                   onPointerDown={(event) => {
+                    blurActiveInputControl();
                     event.preventDefault();
                     setOpenSortFilter((currentValue) => !currentValue);
                   }}
@@ -4009,15 +3710,13 @@ function StickyHeader({
                     event.preventDefault();
                     setOpenSortFilter((currentValue) => !currentValue);
                   }}
-                >
-                  <Icon name="ListFilter" />
-                </button>
+                />
                 {openSortFilter && (
                   <SelectOptionPopover
                     options={activeSortFilterOptions}
                     value={activeSortFilterValue}
                     widthClassName="w-40"
-                    align="right"
+                    anchorRef={sortFilterTriggerRef}
                     onValueChange={(value) => {
                       setSelectedSortFilter(value);
                       setOpenSortFilter(false);
@@ -4057,6 +3756,8 @@ function InteractiveCard({
   children,
   actions,
   actionsClassName = '',
+  ariaLabel,
+  onClick,
 }: {
   heightClassName: string;
   image: string;
@@ -4065,13 +3766,28 @@ function InteractiveCard({
   children: ReactNode;
   actions: ReactNode;
   actionsClassName?: string;
+  ariaLabel?: string;
+  onClick?: () => void;
 }) {
+  const isInteractive = Boolean(onClick);
+
   return (
     <article
       className={[
         'group relative overflow-hidden rounded-xl transition-shadow duration-200 ease-out hover:shadow-card-hover',
+        isInteractive ? 'cursor-pointer' : undefined,
         heightClassName,
-      ].join(' ')}
+      ].filter(Boolean).join(' ')}
+      role={isInteractive ? 'button' : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
+      aria-label={ariaLabel}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (!onClick || (event.key !== 'Enter' && event.key !== ' ')) return;
+
+        event.preventDefault();
+        onClick();
+      }}
     >
       <div className="h-40 w-full overflow-hidden">
         <img
@@ -4100,6 +3816,7 @@ function InteractiveCard({
             'flex h-12 w-full shrink-0 overflow-hidden px-4 pb-4 opacity-0 transition-opacity duration-200 ease-out group-hover:opacity-100',
             actionsClassName,
           ].join(' ')}
+          onClick={(event) => event.stopPropagation()}
         >
           {actions}
         </div>
@@ -4112,10 +3829,9 @@ function AgentCard({
   title,
   description,
   image,
-}: {
-  title: string;
-  description: string;
-  image: string;
+  onOpenDetail,
+}: AgentCardData & {
+  onOpenDetail: () => void;
 }) {
   return (
     <InteractiveCard
@@ -4123,8 +3839,16 @@ function AgentCard({
       image={image}
       contentHeightClassName="h-[88px]"
       contentHoverHeightClassName="group-hover:h-[136px]"
+      ariaLabel={`查看${title}详情`}
+      onClick={onOpenDetail}
       actions={
-        <Button className="w-full" size="md">
+        <Button
+          className="w-full"
+          size="md"
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
+        >
           使用智能体
         </Button>
       }
@@ -4136,6 +3860,84 @@ function AgentCard({
           <p className="line-clamp-2 text-xs text-text-hint">{description}</p>
         </div>
     </InteractiveCard>
+  );
+}
+
+function AgentDetailModal({
+  agent,
+  onClose,
+}: {
+  agent: AgentCardData;
+  onClose: () => void;
+}) {
+  return (
+    <ContentModal
+      ariaLabel={`${agent.title}详情`}
+      bodyPadding={false}
+      panelClassName="relative py-8"
+      bodyClassName="overflow-y-auto"
+      showCloseButton={false}
+      header={({ close }) => (
+        <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-end gap-2 pb-2 pl-6 pr-4 pt-4">
+          <ModalCloseButton aria-label="关闭智能体详情弹窗" onClick={close} />
+        </div>
+      )}
+      onClose={onClose}
+    >
+      <div className="flex w-full flex-col items-center">
+        <section className="flex w-full flex-col items-start gap-4 px-12 pt-4">
+          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-bg-black/5">
+            <img className="h-full w-full object-cover" src={agent.image} alt="" />
+          </div>
+          <div className="flex w-full items-center justify-center gap-6">
+            <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
+              <h2 className="w-full text-lg font-medium leading-7 text-text-primary">
+                {agent.title}
+              </h2>
+              <p className="w-full text-xs leading-4 text-text-hint">
+                {agent.description}
+              </p>
+            </div>
+            <Button
+              className="shrink-0 px-[18px]"
+              size="lg"
+              onClick={(event) => {
+                event.stopPropagation();
+              }}
+            >
+              使用智能体
+            </Button>
+          </div>
+        </section>
+
+        <section className="flex w-full flex-col items-start justify-center px-12 pb-6 pt-4">
+          <p className="w-full text-justify text-sm leading-5 text-text-primary">
+            这是技能的详细介绍，文字自适应换行。这是技能的详细介绍，文字自适应换行。这是技能的详细介绍，文字自适应换行。这是技能的详细介绍，文字自适应换行。这是技能的详细介绍，文字自适应换行。这是技能的详细介绍，文字自适应换行。
+          </p>
+        </section>
+
+        <section className="flex w-full flex-col items-start px-12 pt-6">
+          <div className="flex w-full flex-col items-start pb-4 shadow-border-bottom-subtle">
+            <h3 className="text-sm font-medium leading-5 text-text-primary">信息</h3>
+          </div>
+        </section>
+
+        <section className="flex w-full flex-col items-start gap-2 px-12 py-4 text-left text-sm leading-5">
+          <div className="flex w-full items-center gap-2">
+            <span className="w-32 shrink-0 text-text-hint">开发者</span>
+            <span className="shrink-0 whitespace-nowrap text-text-primary">HelloMe</span>
+          </div>
+          <div className="flex w-full items-center gap-2">
+            <span className="w-32 shrink-0 text-text-hint">类别</span>
+            <span className="shrink-0 whitespace-nowrap text-text-primary">开发者工具</span>
+          </div>
+          <div className="flex w-full items-center gap-2">
+            <span className="w-32 shrink-0 text-text-hint">版本</span>
+            <span className="shrink-0 whitespace-nowrap text-text-primary">v1.0.2</span>
+          </div>
+        </section>
+      </div>
+    </ContentModal>
   );
 }
 
@@ -4275,8 +4077,10 @@ function EmptyMessageResult() {
 
 function CardContainer({
   cardsToShow,
+  onOpenAgentDetail,
 }: {
   cardsToShow: typeof cards;
+  onOpenAgentDetail: (agent: AgentCardData) => void;
 }) {
   if (cardsToShow.length === 0) {
     return <EmptySearchResult title="未找到智能体" />;
@@ -4285,7 +4089,11 @@ function CardContainer({
   return (
     <div className="agent-card-grid grid gap-4">
       {cardsToShow.map((card, index) => (
-        <AgentCard key={`${card.title}-${index}`} {...card} />
+        <AgentCard
+          key={`${card.title}-${index}`}
+          {...card}
+          onOpenDetail={() => onOpenAgentDetail(card)}
+        />
       ))}
     </div>
   );
@@ -4344,48 +4152,43 @@ function ProjectCardMenu({
   onDelete,
   className = 'right-5 top-11',
   ariaLabel = '项目操作',
+  anchorRef,
+  align = 'auto',
 }: {
   onRename: () => void;
   onDelete: () => void;
   className?: string;
   ariaLabel?: string;
+  anchorRef?: RefObject<HTMLElement | null>;
+  align?: 'auto' | 'left' | 'right';
 }) {
   return (
-    <div
+    <PopoverMenu
       className={[
-        'absolute z-30 flex w-[160px] flex-col overflow-hidden rounded-xl bg-bg-white py-2 shadow-popover-strong',
-        className,
+        'z-30 overflow-hidden',
+        anchorRef ? undefined : className,
       ].join(' ')}
+      width="sm"
+      align={anchorRef ? align : 'none'}
+      offset={anchorRef ? 4 : null}
+      anchorRef={anchorRef}
+      shadow="strong"
       role="menu"
       aria-label={ariaLabel}
       onClick={(event) => event.stopPropagation()}
     >
-      <div className="w-full px-2">
-        <button
-          className="flex h-9 w-full items-center gap-2 rounded-lg p-2 text-left text-sm leading-5 text-text-primary hover:bg-bg-soft active:bg-bg-medium"
-          type="button"
-          role="menuitem"
-          onClick={onRename}
-        >
-          <Icon name="SquarePen" className="shrink-0" />
-          <span className="min-w-0 flex-1 truncate">重命名</span>
-        </button>
-      </div>
-      <div className="flex h-3 w-full shrink-0 items-center px-4" aria-hidden="true">
-        <div className="h-px w-full bg-[#F3F3F3]" />
-      </div>
-      <div className="w-full px-2">
-        <button
-          className="flex h-9 w-full items-center gap-2 rounded-lg p-2 text-left text-sm leading-5 text-text-primary hover:bg-bg-soft active:bg-bg-medium"
-          type="button"
-          role="menuitem"
-          onClick={onDelete}
-        >
-          <Icon name="Trash" className="shrink-0" />
-          <span className="min-w-0 flex-1 truncate">删除</span>
-        </button>
-      </div>
-    </div>
+      <PopoverSection>
+        <PopoverItem icon="SquarePen" role="menuitem" onClick={onRename}>
+          重命名
+        </PopoverItem>
+      </PopoverSection>
+      <PopoverDivider />
+      <PopoverSection>
+        <PopoverItem icon="Trash" role="menuitem" onClick={onDelete}>
+          删除
+        </PopoverItem>
+      </PopoverSection>
+    </PopoverMenu>
   );
 }
 
@@ -4408,6 +4211,8 @@ function ProjectCard({
   onDelete: () => void;
   onOpenDetail: () => void;
 }) {
+  const menuTriggerRef = useRef<HTMLButtonElement | null>(null);
+
   return (
     <div className="relative h-[234px] min-w-0">
       <article className="flex h-full min-w-0 flex-col overflow-hidden rounded-xl bg-bg-white">
@@ -4432,6 +4237,7 @@ function ProjectCard({
               <CountBadge count={project.count} />
             </div>
             <button
+              ref={menuTriggerRef}
               className={[
                 'flex h-7 w-7 shrink-0 items-center justify-center rounded-button',
                 isMenuOpen
@@ -4441,9 +4247,15 @@ function ProjectCard({
               type="button"
               aria-label={`${project.title} 更多操作`}
               aria-expanded={isMenuOpen}
+              onPointerDown={(event) => {
+                blurActiveInputControl();
+                event.stopPropagation();
+                event.preventDefault();
+                onToggleMenu();
+              }}
               onClick={(event) => {
                 event.stopPropagation();
-                onToggleMenu();
+                event.preventDefault();
               }}
             >
               <Icon name="Ellipsis" />
@@ -4458,8 +4270,13 @@ function ProjectCard({
             ))
           ) : (
             <div className="flex min-h-0 flex-1 items-center justify-center">
-              <Button variant="text" size="md" onClick={onChooseAgent} className="gap-1 text-text-secondary">
-                <Icon name="Plus" className="shrink-0" />
+              <Button
+                variant="text"
+                size="md"
+                icon="Plus"
+                onClick={onChooseAgent}
+                className="text-text-secondary"
+              >
                 创建任务
               </Button>
             </div>
@@ -4482,6 +4299,8 @@ function ProjectCard({
       </article>
       {isMenuOpen && (
         <ProjectCardMenu
+          anchorRef={menuTriggerRef}
+          align="right"
           onRename={() => {
             onCloseMenu();
             onRename();
@@ -4576,7 +4395,7 @@ function ProjectDetailModeTabs({
               'h-7 shrink-0 text-lg leading-7 transition-colors',
               isActive
                 ? 'font-medium text-text-primary'
-                : 'font-medium text-text-hint hover:text-[#666666] active:text-text-primary',
+                : 'font-medium text-text-hint hover:text-text-secondary active:text-text-primary',
             ].join(' ')}
             type="button"
             onClick={() => onValueChange(tab)}
@@ -4592,10 +4411,7 @@ function ProjectDetailModeTabs({
 function ProjectDetailTaskRow({
   item,
   isLast,
-  showDivider,
   isMenuOpen,
-  onHoverStart,
-  onHoverEnd,
   onToggleMenu,
   onCloseMenu,
   onRename,
@@ -4603,24 +4419,18 @@ function ProjectDetailTaskRow({
 }: {
   item: ProjectItem;
   isLast: boolean;
-  showDivider: boolean;
   isMenuOpen: boolean;
-  onHoverStart: () => void;
-  onHoverEnd: () => void;
   onToggleMenu: () => void;
   onCloseMenu: () => void;
   onRename: () => void;
   onDelete: () => void;
 }) {
   const isRunning = 'status' in item && Boolean(item.status);
+  const menuTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   return (
-    <div
-      className="flex h-[82px] w-full"
-      onMouseEnter={onHoverStart}
-      onMouseLeave={onHoverEnd}
-    >
-      <div className="group/project-detail-row flex h-full min-w-0 flex-1 rounded-lg px-3 transition-colors hover:bg-[#F9F9F9]">
+    <div className="flex h-[82px] w-full">
+      <div className="group/project-detail-row flex h-full min-w-0 flex-1 rounded-lg px-3">
         <div
           className="relative flex h-full min-w-0 flex-1 items-center gap-4 py-5 text-left"
         >
@@ -4636,7 +4446,7 @@ function ProjectDetailTaskRow({
               {isRunning && (
                 <span className="h-1.5 w-1.5 shrink-0 rounded-pill bg-accent-success" />
               )}
-              <span className="flex h-4 shrink-0 items-center justify-center rounded-pill border border-border-default px-2 text-center text-[10px] leading-[13px] text-text-secondary">
+              <span className="flex h-4 shrink-0 items-center justify-center rounded-pill border border-border-default px-2 text-center text-xxs text-text-secondary">
                 自动化
               </span>
             </div>
@@ -4653,30 +4463,29 @@ function ProjectDetailTaskRow({
             </div>
           </div>
 
-          <button
-            className={[
-              'flex h-7 w-7 shrink-0 items-center justify-center rounded-button transition-colors',
-              isMenuOpen
-                ? 'bg-[#EAEAEA] text-text-primary'
-                : 'text-text-hint hover:bg-[#F3F3F3] hover:text-text-primary active:bg-[#EAEAEA] active:text-text-primary',
-            ].join(' ')}
-            type="button"
+          <ToolbarIconButton
+            ref={menuTriggerRef}
+            name="Ellipsis"
+            surface="white"
+            tone="hint"
+            selected={isMenuOpen}
             aria-label={`${item.title} 更多操作`}
             aria-expanded={isMenuOpen}
-            onMouseDown={(event) => {
+            onPointerDown={(event) => {
+              blurActiveInputControl();
               event.stopPropagation();
+              event.preventDefault();
+              onToggleMenu();
             }}
             onClick={(event) => {
               event.stopPropagation();
-              onToggleMenu();
+              event.preventDefault();
             }}
-          >
-            <Icon name="Ellipsis" />
-          </button>
+          />
 
           {isMenuOpen && (
             <ProjectCardMenu
-              className="right-0 top-[58px]"
+              anchorRef={menuTriggerRef}
               ariaLabel="任务操作"
               onRename={() => {
                 onCloseMenu();
@@ -4691,10 +4500,7 @@ function ProjectDetailTaskRow({
 
           {!isLast && (
             <div
-              className={[
-                'pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-[#F3F3F3] transition-opacity',
-                showDivider ? 'opacity-100' : 'opacity-0',
-              ].join(' ')}
+              className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-bg-medium"
               aria-hidden="true"
             />
           )}
@@ -4713,7 +4519,6 @@ function ProjectDetailTaskList({
   onRenameTask: (item: ProjectItem) => void;
   onDeleteTask: (item: ProjectItem) => void;
 }) {
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [openTaskMenuKey, setOpenTaskMenuKey] = useState<string | null>(null);
 
   useEffect(() => {
@@ -4743,10 +4548,7 @@ function ProjectDetailTaskList({
             key={rowKey}
             item={item}
             isLast={index === tasksToShow.length - 1}
-            showDivider={hoveredIndex !== index && hoveredIndex !== index + 1}
             isMenuOpen={openTaskMenuKey === rowKey}
-            onHoverStart={() => setHoveredIndex(index)}
-            onHoverEnd={() => setHoveredIndex(null)}
             onToggleMenu={() =>
               setOpenTaskMenuKey((currentKey) =>
                 currentKey === rowKey ? null : rowKey,
@@ -4762,6 +4564,400 @@ function ProjectDetailTaskList({
   );
 }
 
+function ProjectDetailFileCheckbox({
+  label,
+  checked = false,
+  indeterminate = false,
+  alwaysVisible = false,
+  onToggle,
+}: {
+  label: string;
+  checked?: boolean;
+  indeterminate?: boolean;
+  alwaysVisible?: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      className={[
+        'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-border-default text-text-primary transition-[opacity,background-color]',
+        checked || indeterminate ? 'bg-bg-medium' : 'bg-transparent',
+        alwaysVisible || checked || indeterminate
+          ? 'opacity-100'
+          : 'opacity-0 group-hover/project-file-row:opacity-100',
+      ].join(' ')}
+      type="button"
+      aria-label={label}
+      aria-checked={indeterminate ? 'mixed' : checked}
+      role="checkbox"
+      onPointerDown={(event) => {
+        event.stopPropagation();
+      }}
+      onClick={(event) => {
+        event.stopPropagation();
+        onToggle();
+      }}
+    >
+      {checked && <Icon name="Check" size="xs" strokeWidth={3} />}
+      {indeterminate && !checked && (
+        <Icon name="Minus" size="xs" strokeWidth={3} />
+      )}
+    </button>
+  );
+}
+
+type ProjectDetailFileSortKey = 'name' | 'time' | 'size';
+type ProjectDetailFileSortState = {
+  key: ProjectDetailFileSortKey;
+  direction: AccountDetailSortDirection;
+} | null;
+
+function parseProjectFileDate(date: string) {
+  const [year, month, day] = date.split('/').map(Number);
+
+  return new Date(year, month - 1, day).getTime();
+}
+
+function parseProjectFileSize(size: string) {
+  const match = size.trim().match(/^([\d.]+)\s*([a-zA-Z]+)?$/);
+
+  if (match === null) {
+    return 0;
+  }
+
+  const value = Number.parseFloat(match[1]);
+  const unit = (match[2] ?? 'B').toUpperCase();
+  const unitScale: Record<string, number> = {
+    B: 1,
+    KB: 1024,
+    MB: 1024 ** 2,
+    GB: 1024 ** 3,
+    TB: 1024 ** 4,
+  };
+
+  return value * (unitScale[unit] ?? 1);
+}
+
+function ProjectDetailFileSortIcon({
+  direction,
+}: {
+  direction: AccountDetailSortDirection | null;
+}) {
+  return <SortChevronsIcon className="shrink-0 text-text-primary" direction={direction} />;
+}
+
+function getProjectFileSortValue(file: ProjectFile, key: ProjectDetailFileSortKey) {
+  if (key === 'time') {
+    return parseProjectFileDate(file.date);
+  }
+
+  if (key === 'size') {
+    return parseProjectFileSize(file.size);
+  }
+
+  return file.name;
+}
+
+function ProjectDetailFileList({
+  filesToShow,
+  selectedFileKeys,
+  onToggleFile,
+  onToggleAllFiles,
+  onRenameFile,
+  onDeleteFile,
+}: {
+  filesToShow: ProjectFile[];
+  selectedFileKeys: Set<string>;
+  onToggleFile: (file: ProjectFile) => void;
+  onToggleAllFiles: () => void;
+  onRenameFile: (file: ProjectFile) => void;
+  onDeleteFile: (file: ProjectFile) => void;
+}) {
+  const [openFileMenuKey, setOpenFileMenuKey] = useState<string | null>(null);
+  const [sortState, setSortState] = useState<ProjectDetailFileSortState>(null);
+  const sortedFilesToShow = useMemo(() => {
+    if (sortState === null) {
+      return filesToShow;
+    }
+
+    return [...filesToShow].sort((firstFile, secondFile) => {
+      const firstValue = getProjectFileSortValue(firstFile, sortState.key);
+      const secondValue = getProjectFileSortValue(secondFile, sortState.key);
+
+      if (typeof firstValue === 'string' && typeof secondValue === 'string') {
+        return sortState.direction === 'asc'
+          ? firstValue.localeCompare(secondValue, 'zh-Hans-CN')
+          : secondValue.localeCompare(firstValue, 'zh-Hans-CN');
+      }
+
+      return sortState.direction === 'asc'
+        ? Number(firstValue) - Number(secondValue)
+        : Number(secondValue) - Number(firstValue);
+    });
+  }, [filesToShow, sortState]);
+  const allVisibleFilesSelected =
+    filesToShow.length > 0 &&
+    filesToShow.every((file) => selectedFileKeys.has(getProjectFileKey(file)));
+  const someVisibleFilesSelected =
+    filesToShow.some((file) => selectedFileKeys.has(getProjectFileKey(file)));
+
+  useEffect(() => {
+    if (openFileMenuKey === null) {
+      return undefined;
+    }
+
+    const closeMenu = () => setOpenFileMenuKey(null);
+    document.addEventListener('click', closeMenu);
+
+    return () => {
+      document.removeEventListener('click', closeMenu);
+    };
+  }, [openFileMenuKey]);
+
+  const handleSortColumn = (key: ProjectDetailFileSortKey) => {
+    setSortState((currentSort) => {
+      if (currentSort?.key !== key) {
+        return {
+          key,
+          direction: key === 'name' ? 'asc' : key === 'size' ? 'desc' : 'asc',
+        };
+      }
+
+      if (currentSort.direction === 'asc') {
+        return { key, direction: 'desc' };
+      }
+
+      return null;
+    });
+  };
+
+  if (filesToShow.length === 0) {
+    return <EmptySearchResult title="未找到文件" />;
+  }
+
+  return (
+    <div className="flex min-w-0 flex-col overflow-hidden rounded-xl bg-bg-white">
+      <div className="w-full px-5">
+        <div className="flex h-[52px] items-center gap-4 border-b border-border-subtle text-sm leading-5 text-text-hint">
+          <ProjectDetailFileCheckbox
+            label="选择全部文件"
+            checked={allVisibleFilesSelected}
+            indeterminate={someVisibleFilesSelected && !allVisibleFilesSelected}
+            alwaysVisible
+            onToggle={onToggleAllFiles}
+          />
+          <button
+            className="group flex min-w-0 flex-1 items-center gap-1 text-left transition-colors hover:text-text-secondary active:text-text-primary"
+            type="button"
+            onClick={() => handleSortColumn('name')}
+          >
+            <span className="truncate">名称</span>
+            <ProjectDetailFileSortIcon
+              direction={sortState?.key === 'name' ? sortState.direction : null}
+            />
+          </button>
+          <div className="flex min-w-0 flex-1 items-center gap-4">
+            <div className="flex min-w-0 flex-1 items-center">
+              <span className="truncate">类型</span>
+            </div>
+            <button
+              className="group flex min-w-0 flex-1 items-center gap-1 text-left transition-colors hover:text-text-secondary active:text-text-primary"
+              type="button"
+              onClick={() => handleSortColumn('time')}
+            >
+              <span className="truncate">时间</span>
+              <ProjectDetailFileSortIcon
+                direction={sortState?.key === 'time' ? sortState.direction : null}
+              />
+            </button>
+            <button
+              className="group flex min-w-0 flex-1 items-center gap-1 text-left transition-colors hover:text-text-secondary active:text-text-primary"
+              type="button"
+              onClick={() => handleSortColumn('size')}
+            >
+              <span className="truncate">大小</span>
+              <ProjectDetailFileSortIcon
+                direction={sortState?.key === 'size' ? sortState.direction : null}
+              />
+            </button>
+            <div className="h-5 w-7 shrink-0" aria-hidden="true" />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1 px-3 py-1">
+        {sortedFilesToShow.map((file) => {
+          const fileKey = getProjectFileKey(file);
+          const selected = selectedFileKeys.has(fileKey);
+
+          return (
+            <ProjectDetailFileRow
+              key={fileKey}
+              file={file}
+              selected={selected}
+              isMenuOpen={openFileMenuKey === fileKey}
+              onToggle={() => onToggleFile(file)}
+              onToggleMenu={() =>
+                setOpenFileMenuKey((currentKey) =>
+                  currentKey === fileKey ? null : fileKey,
+                )
+              }
+              onCloseMenu={() => setOpenFileMenuKey(null)}
+              onRename={() => onRenameFile(file)}
+              onDelete={() => onDeleteFile(file)}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ProjectDetailFileRow({
+  file,
+  selected,
+  isMenuOpen,
+  onToggle,
+  onToggleMenu,
+  onCloseMenu,
+  onRename,
+  onDelete,
+}: {
+  file: ProjectFile;
+  selected: boolean;
+  isMenuOpen: boolean;
+  onToggle: () => void;
+  onToggleMenu: () => void;
+  onCloseMenu: () => void;
+  onRename: () => void;
+  onDelete: () => void;
+}) {
+  const menuTriggerRef = useRef<HTMLButtonElement | null>(null);
+
+  return (
+    <div
+      className={[
+        'group/project-file-row relative flex h-12 items-center gap-4 rounded-lg px-2 py-3',
+        selected ? 'bg-bg-soft' : 'hover:bg-bg-soft',
+      ].join(' ')}
+    >
+      <ProjectDetailFileCheckbox
+        label={`选择 ${file.name}`}
+        checked={selected}
+        onToggle={onToggle}
+      />
+      <div className="flex min-w-0 flex-1 items-center gap-2">
+        <img className="h-6 w-6 shrink-0" src={file.icon} alt="" />
+        <p className="min-w-0 flex-1 truncate text-sm leading-5 text-text-primary group-hover/project-file-row:underline">
+          {file.name}
+        </p>
+      </div>
+      <div className="flex min-w-0 flex-1 items-center gap-4">
+        <p className="min-w-0 flex-1 truncate text-sm leading-5 text-text-hint">
+          {file.type}
+        </p>
+        <p className="min-w-0 flex-1 truncate text-sm leading-5 text-text-hint">
+          {file.date}
+        </p>
+        <p className="min-w-0 flex-1 truncate text-sm leading-5 text-text-hint">
+          {file.size}
+        </p>
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center">
+          <ToolbarIconButton
+            ref={menuTriggerRef}
+            name="Ellipsis"
+            size="xs"
+            surface="soft"
+            tone="hint"
+            selected={isMenuOpen}
+            className={[
+              'h-6 w-6 opacity-0 transition-opacity group-hover/project-file-row:opacity-100',
+              isMenuOpen ? 'opacity-100' : undefined,
+            ].filter(Boolean).join(' ')}
+            aria-label={`${file.name} 更多操作`}
+            aria-expanded={isMenuOpen}
+            onPointerDown={(event) => {
+              blurActiveInputControl();
+              event.stopPropagation();
+              event.preventDefault();
+              onToggleMenu();
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              event.preventDefault();
+            }}
+          />
+        </div>
+      </div>
+      {isMenuOpen && (
+        <ProjectDetailFileMenu
+          anchorRef={menuTriggerRef}
+          onRename={() => {
+            onCloseMenu();
+            onRename();
+          }}
+          onDownload={() => {}}
+          onMove={() => {}}
+          onDelete={() => {
+            onCloseMenu();
+            onDelete();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ProjectDetailFileMenu({
+  anchorRef,
+  onRename,
+  onDownload,
+  onMove,
+  onDelete,
+}: {
+  anchorRef: RefObject<HTMLElement | null>;
+  onRename: () => void;
+  onDownload: () => void;
+  onMove: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <PopoverMenu
+      width="sm"
+      align="right"
+      anchorRef={anchorRef}
+      shadow="strong"
+      role="menu"
+      aria-label="文件操作"
+      onPointerDownCapture={(event) => event.stopPropagation()}
+      onMouseDownCapture={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
+    >
+      <PopoverSection>
+        <PopoverItem icon="SquarePen" role="menuitem" onClick={onRename}>
+          修改名称
+        </PopoverItem>
+      </PopoverSection>
+      <PopoverSection>
+        <PopoverItem icon="Download" role="menuitem" onClick={onDownload}>
+          下载
+        </PopoverItem>
+      </PopoverSection>
+      <PopoverSection>
+        <PopoverItem icon="FolderInput" role="menuitem" onClick={onMove}>
+          移动位置
+        </PopoverItem>
+      </PopoverSection>
+      <PopoverDivider />
+      <PopoverSection>
+        <PopoverItem icon="Trash" role="menuitem" onClick={onDelete}>
+          删除
+        </PopoverItem>
+      </PopoverSection>
+    </PopoverMenu>
+  );
+}
+
 function ProjectDetailView({
   mode,
   onModeChange,
@@ -4770,8 +4966,11 @@ function ProjectDetailView({
   searchValue,
   onSearchValueChange,
   tasksToShow,
+  filesToShow,
   onRenameTask,
   onDeleteTask,
+  onRenameFile,
+  onRequestDeleteFiles,
 }: {
   mode: ProjectDetailMode;
   onModeChange: (value: ProjectDetailMode) => void;
@@ -4780,16 +4979,54 @@ function ProjectDetailView({
   searchValue: string;
   onSearchValueChange: (value: string) => void;
   tasksToShow: ProjectItem[];
+  filesToShow: ProjectFile[];
   onRenameTask: (item: ProjectItem) => void;
   onDeleteTask: (item: ProjectItem) => void;
+  onRenameFile: (file: ProjectFile) => void;
+  onRequestDeleteFiles: (fileKeys: string[]) => void;
 }) {
   const emptyTitle = mode === '文件' ? '暂无文件' : '暂无成员';
+  const detailTabs = mode === '文件' ? projectTabs : projectDetailTabs;
+  const searchPlaceholder = mode === '文件' ? '搜索文件' : '搜索任务';
+  const showTaskActions = mode === '任务';
+  const showFileActions = mode === '文件';
   const [openStatusFilter, setOpenStatusFilter] = useState(false);
+  const [openFileTypeFilter, setOpenFileTypeFilter] = useState(false);
   const [selectedStatusFilter, setSelectedStatusFilter] =
     useState<(typeof projectDetailStatusFilterOptions)[number]>('全部状态');
+  const [selectedFileTypeFilter, setSelectedFileTypeFilter] =
+    useState<(typeof projectFileTypeFilterOptions)[number]>('全部');
+  const [selectedFileKeys, setSelectedFileKeys] = useState<Set<string>>(new Set());
+  const statusFilterTriggerRef = useRef<HTMLDivElement | null>(null);
+  const fileTypeFilterTriggerRef = useRef<HTMLDivElement | null>(null);
+  const visibleFilesToShow = selectedFileTypeFilter === '全部'
+    ? filesToShow
+    : filesToShow.filter((file) => file.type === selectedFileTypeFilter);
+  const selectedFileCount = selectedFileKeys.size;
+  const selectedFileKeyList = [...selectedFileKeys];
 
   useEffect(() => {
-    if (!openStatusFilter) {
+    if (mode !== '任务') {
+      setOpenStatusFilter(false);
+    }
+
+    if (mode !== '文件') {
+      setOpenFileTypeFilter(false);
+      setSelectedFileKeys(new Set());
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    setSelectedFileKeys((currentKeys) => {
+      const visibleKeys = new Set(filesToShow.map(getProjectFileKey));
+      const nextKeys = [...currentKeys].filter((key) => visibleKeys.has(key));
+
+      return nextKeys.length === currentKeys.size ? currentKeys : new Set(nextKeys);
+    });
+  }, [filesToShow]);
+
+  useEffect(() => {
+    if (!openStatusFilter && !openFileTypeFilter) {
       return undefined;
     }
 
@@ -4798,12 +5035,14 @@ function ProjectDetailView({
 
       if (
         target?.closest('[data-project-detail-status-filter-trigger="true"]') ||
+        target?.closest('[data-project-detail-file-type-filter-trigger="true"]') ||
         target?.closest('[data-account-filter-popover="true"]')
       ) {
         return;
       }
 
       setOpenStatusFilter(false);
+      setOpenFileTypeFilter(false);
     }
 
     document.addEventListener('pointerdown', handlePointerDown, true);
@@ -4811,89 +5050,218 @@ function ProjectDetailView({
     return () => {
       document.removeEventListener('pointerdown', handlePointerDown, true);
     };
-  }, [openStatusFilter]);
+  }, [openStatusFilter, openFileTypeFilter]);
+
+  function toggleFile(file: ProjectFile) {
+    const fileKey = getProjectFileKey(file);
+
+    setSelectedFileKeys((currentKeys) => {
+      const nextKeys = new Set(currentKeys);
+
+      if (nextKeys.has(fileKey)) {
+        nextKeys.delete(fileKey);
+      } else {
+        nextKeys.add(fileKey);
+      }
+
+      return nextKeys;
+    });
+  }
+
+  function toggleAllVisibleFiles() {
+    const visibleFileKeys = visibleFilesToShow.map(getProjectFileKey);
+    const allVisibleFilesSelected =
+      visibleFileKeys.length > 0 &&
+      visibleFileKeys.every((key) => selectedFileKeys.has(key));
+
+    setSelectedFileKeys((currentKeys) => {
+      const nextKeys = new Set(currentKeys);
+
+      if (allVisibleFilesSelected) {
+        visibleFileKeys.forEach((key) => nextKeys.delete(key));
+      } else {
+        visibleFileKeys.forEach((key) => nextKeys.add(key));
+      }
+
+      return nextKeys;
+    });
+  }
+
+  function deleteSelectedFiles() {
+    if (selectedFileKeyList.length === 0) return;
+
+    onRequestDeleteFiles(selectedFileKeyList);
+  }
 
   return (
     <>
-      <section className="sticky top-14 z-20 bg-bg-soft px-12">
+      <section className="page-section-x sticky top-14 z-20 bg-bg-soft">
         <div className="account-billing-tabs-bar flex items-center shadow-border-bottom-default">
           <ProjectDetailModeTabs value={mode} onValueChange={onModeChange} />
         </div>
 
         <div className="home-filter-bar flex items-center justify-between gap-4">
           <TabBar
-            items={projectDetailTabs}
+            items={detailTabs}
             value={activeTab}
             onValueChange={onActiveTabChange}
           />
 
-          <div className="flex h-8 w-[384px] shrink-0 items-center justify-end gap-3">
-            <div className="relative flex h-8 w-8 shrink-0 items-center">
-              <button
-                data-project-detail-status-filter-trigger="true"
-                className={[
-                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-button',
-                  openStatusFilter
-                    ? 'bg-bg-strong text-text-primary'
-                    : 'text-text-secondary hover:bg-bg-medium hover:text-text-primary active:bg-bg-strong active:text-text-primary',
-                ].join(' ')}
-                type="button"
-                aria-label="筛选"
-                aria-expanded={openStatusFilter}
-                onPointerDown={(event) => {
-                  event.preventDefault();
-                  setOpenStatusFilter((currentValue) => !currentValue);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key !== 'Enter' && event.key !== ' ') {
-                    return;
-                  }
-
-                  event.preventDefault();
-                  setOpenStatusFilter((currentValue) => !currentValue);
-                }}
+          <div
+            className={[
+              'flex h-8 shrink-0 items-center justify-end gap-3',
+              showFileActions ? 'w-auto' : 'w-[384px]',
+            ].join(' ')}
+          >
+            {showTaskActions && (
+              <div
+                ref={statusFilterTriggerRef}
+                className="relative flex h-8 w-8 shrink-0 items-center"
               >
-                <Icon name="ListFilter" />
-              </button>
-              {openStatusFilter && (
-                <SelectOptionPopover
-                  options={projectDetailStatusFilterOptions}
-                  value={selectedStatusFilter}
-                  widthClassName="w-40"
-                  align="right"
-                  onValueChange={(value) => {
-                    setSelectedStatusFilter(value);
-                    setOpenStatusFilter(false);
+                <ToolbarIconButton
+                  data-project-detail-status-filter-trigger="true"
+                  name="ListFilter"
+                  surface="soft"
+                  selected={openStatusFilter}
+                  aria-label="筛选"
+                  aria-expanded={openStatusFilter}
+                  onPointerDown={(event) => {
+                    blurActiveInputControl();
+                    event.preventDefault();
+                    setOpenStatusFilter((currentValue) => !currentValue);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter' && event.key !== ' ') {
+                      return;
+                    }
+
+                    event.preventDefault();
+                    setOpenStatusFilter((currentValue) => !currentValue);
                   }}
                 />
-              )}
-            </div>
+                {openStatusFilter && (
+                  <SelectOptionPopover
+                    options={projectDetailStatusFilterOptions}
+                    value={selectedStatusFilter}
+                    widthClassName="w-40"
+                    anchorRef={statusFilterTriggerRef}
+                    onValueChange={(value) => {
+                      setSelectedStatusFilter(value);
+                      setOpenStatusFilter(false);
+                    }}
+                  />
+                )}
+              </div>
+            )}
+            {showFileActions && (
+              <div
+                ref={fileTypeFilterTriggerRef}
+                className="relative flex h-8 w-8 shrink-0 items-center"
+              >
+                <ToolbarIconButton
+                  data-project-detail-file-type-filter-trigger="true"
+                  name="ListFilter"
+                  surface="soft"
+                  selected={openFileTypeFilter}
+                  aria-label="文件类型筛选"
+                  aria-expanded={openFileTypeFilter}
+                  onPointerDown={(event) => {
+                    blurActiveInputControl();
+                    event.preventDefault();
+                    setOpenFileTypeFilter((currentValue) => !currentValue);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Enter' && event.key !== ' ') {
+                      return;
+                    }
+
+                    event.preventDefault();
+                    setOpenFileTypeFilter((currentValue) => !currentValue);
+                  }}
+                />
+                {openFileTypeFilter && (
+                  <SelectOptionPopover
+                    options={projectFileTypeFilterOptions}
+                    value={selectedFileTypeFilter}
+                    widthClassName="w-40"
+                    anchorRef={fileTypeFilterTriggerRef}
+                    onValueChange={(value) => {
+                      setSelectedFileTypeFilter(value);
+                      setOpenFileTypeFilter(false);
+                    }}
+                  />
+                )}
+              </div>
+            )}
             <SearchInput
               className="w-60"
               value={searchValue}
-              placeholder="搜索任务"
-              aria-label="搜索任务"
+              placeholder={searchPlaceholder}
+              aria-label={searchPlaceholder}
               onValueChange={onSearchValueChange}
             />
-            <Button className="h-8 w-[88px] shrink-0 px-4" size="md">
-              新建任务
-            </Button>
+            {showTaskActions && (
+              <Button className="h-8 w-[88px] shrink-0 px-4" size="md">
+                新建任务
+              </Button>
+            )}
+            {showFileActions && selectedFileCount > 0 && (
+              <>
+                <div className="h-[15px] w-px shrink-0 bg-border-strong" />
+                <Button
+                  variant="secondary"
+                  surface="soft"
+                  size="md"
+                  icon="Download"
+                  onClick={() => {}}
+                >
+                  下载
+                </Button>
+                <Button
+                  variant="secondary"
+                  surface="soft"
+                  size="md"
+                  icon="FolderInput"
+                  onClick={() => {}}
+                >
+                  移动
+                </Button>
+                <Button
+                  variant="secondary"
+                  surface="soft"
+                  size="md"
+                  icon="Trash"
+                  onClick={deleteSelectedFiles}
+                >
+                  删除
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </section>
 
       <div className="home-sticky-spacer" aria-hidden="true" />
       <div className="home-results-scroll">
-        <section className="home-results-content px-12">
+        <section className="home-results-content page-section-x">
             {mode === '任务' ? (
               <ProjectDetailTaskList
                 tasksToShow={tasksToShow}
                 onRenameTask={onRenameTask}
                 onDeleteTask={onDeleteTask}
               />
+            ) : mode === '文件' ? (
+              <ProjectDetailFileList
+                filesToShow={visibleFilesToShow}
+                selectedFileKeys={selectedFileKeys}
+                onToggleFile={toggleFile}
+                onToggleAllFiles={toggleAllVisibleFiles}
+                onRenameFile={onRenameFile}
+                onDeleteFile={(file) => onRequestDeleteFiles([getProjectFileKey(file)])}
+              />
             ) : (
-            <EmptySearchResult title={emptyTitle} />
-          )}
+              <EmptySearchResult title={emptyTitle} />
+            )}
         </section>
       </div>
     </>
@@ -4917,26 +5285,8 @@ function ProjectNameModal({
   onClose: () => void;
   onConfirm: (value: string) => void;
 }) {
-  const [isVisible, setIsVisible] = useState(false);
   const [projectName, setProjectName] = useState(initialValue);
-  const closeTimerRef = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-
-  const closeWithAnimation = useCallback(() => {
-    setIsVisible(false);
-    closeTimerRef.current = window.setTimeout(onClose, 180);
-  }, [onClose]);
-
-  const confirmWithAnimation = useCallback(
-    (nextName: string) => {
-      setIsVisible(false);
-      closeTimerRef.current = window.setTimeout(() => {
-        onConfirm(nextName);
-        onClose();
-      }, 180);
-    },
-    [onClose, onConfirm],
-  );
 
   useEffect(() => {
     function placeInputCaret(input: HTMLInputElement) {
@@ -4951,7 +5301,6 @@ function ProjectNameModal({
 
     let caretFrame = 0;
     const openTimer = window.setTimeout(() => {
-      setIsVisible(true);
       const input = inputRef.current;
 
       if (!input) return;
@@ -4966,100 +5315,48 @@ function ProjectNameModal({
       });
     }, 20);
 
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        closeWithAnimation();
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown);
     return () => {
       window.clearTimeout(openTimer);
       if (caretFrame) {
         window.cancelAnimationFrame(caretFrame);
       }
-      if (closeTimerRef.current !== null) {
-        window.clearTimeout(closeTimerRef.current);
-      }
-      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [closeWithAnimation, focusPlacement]);
+  }, [focusPlacement]);
 
   function handleConfirm() {
     const nextName = projectName.trim();
-    if (!nextName) return;
+    if (!nextName) return false;
 
-    confirmWithAnimation(nextName);
+    onConfirm(nextName);
+    return true;
   }
 
   return (
-    <div
-      className={[
-        'fixed inset-0 z-50 flex items-center justify-center bg-bg-black/60 transition-opacity duration-200 ease-out',
-        isVisible ? 'opacity-100' : 'opacity-0',
-      ].join(' ')}
-      role="presentation"
-      onClick={closeWithAnimation}
-    >
-      <form
-        className={[
-          'flex w-[480px] flex-col overflow-hidden rounded-modal bg-bg-white shadow-popover transition-all duration-200 ease-out',
-          isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
-        ].join(' ')}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="project-name-modal-title"
-        onPointerDown={(event) => {
+    <FormModal
+      title={title}
+      closeLabel={`关闭${title}弹窗`}
+      confirmDisabled={disableConfirmWhenEmpty && !projectName.trim()}
+      formProps={{
+        onPointerDown: (event) => {
           const target = event.target as HTMLElement | null;
 
           if (!target?.closest('input, textarea, button, a, select, [role="button"]')) {
             inputRef.current?.blur();
           }
-        }}
-        onClick={(event) => event.stopPropagation()}
-        onSubmit={(event) => {
-          event.preventDefault();
-          handleConfirm();
-        }}
-      >
-        <div className="flex w-full items-center justify-end gap-2 pb-2 pl-6 pr-4 pt-4">
-          <h2
-            id="project-name-modal-title"
-            className="min-w-0 flex-1 truncate text-base font-medium leading-5 text-text-primary"
-          >
-            {title}
-          </h2>
-          <button
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-button text-text-primary hover:bg-bg-soft active:bg-bg-medium"
-            type="button"
-            aria-label={`关闭${title}弹窗`}
-            onClick={closeWithAnimation}
-          >
-            <Icon name="X" />
-          </button>
-        </div>
-        <div className="flex w-full items-center px-6 py-4">
-          <input
-            ref={inputRef}
-            className="h-10 min-w-0 flex-1 rounded-button bg-bg-white px-4 py-2.5 text-sm font-normal leading-5 text-text-primary shadow-border-strong outline-none placeholder:text-text-disabled focus:shadow-border-selected"
-            value={projectName}
-            placeholder={placeholder}
-            maxLength={20}
-            onChange={(event) => setProjectName(event.target.value)}
-          />
-        </div>
-        <div className="flex w-full flex-col items-end px-6 pb-6 pt-4">
-          <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" size="lg" onClick={closeWithAnimation}>
-              取消
-            </Button>
-            <Button size="lg" type="submit" disabled={disableConfirmWhenEmpty && !projectName.trim()}>
-              确定
-            </Button>
-          </div>
-        </div>
-      </form>
-    </div>
+        },
+      }}
+      onClose={onClose}
+      onConfirm={handleConfirm}
+    >
+      <InputField
+        ref={inputRef}
+        className="w-full"
+        value={projectName}
+        placeholder={placeholder}
+        maxLength={20}
+        onValueChange={setProjectName}
+      />
+    </FormModal>
   );
 }
 
@@ -5080,98 +5377,17 @@ function ProjectDeleteModal({
   onClose: () => void;
   onConfirm: () => void;
 }) {
-  const [isVisible, setIsVisible] = useState(false);
-  const closeTimerRef = useRef<number | null>(null);
-
-  const closeWithAnimation = useCallback(() => {
-    setIsVisible(false);
-    closeTimerRef.current = window.setTimeout(onClose, 180);
-  }, [onClose]);
-
-  const confirmWithAnimation = useCallback(() => {
-    setIsVisible(false);
-    closeTimerRef.current = window.setTimeout(() => {
-      onConfirm();
-      onClose();
-    }, 180);
-  }, [onClose, onConfirm]);
-
-  useEffect(() => {
-    const openTimer = window.setTimeout(() => setIsVisible(true), 20);
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') {
-        closeWithAnimation();
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.clearTimeout(openTimer);
-      if (closeTimerRef.current !== null) {
-        window.clearTimeout(closeTimerRef.current);
-      }
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [closeWithAnimation]);
-
   return (
-    <div
-      className={[
-        'fixed inset-0 z-50 flex items-center justify-center bg-bg-black/60 transition-opacity duration-200 ease-out',
-        isVisible ? 'opacity-100' : 'opacity-0',
-      ].join(' ')}
-      role="presentation"
-      onClick={closeWithAnimation}
-    >
-      <div
-        className={[
-          'flex w-[480px] flex-col overflow-hidden rounded-modal bg-bg-white shadow-popover transition-all duration-200 ease-out',
-          isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
-        ].join(' ')}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="project-delete-modal-title"
-        aria-label={ariaLabel}
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex w-full items-center justify-end gap-2 pb-2 pl-6 pr-4 pt-4">
-          <h2
-            id="project-delete-modal-title"
-            className="min-w-0 flex-1 truncate text-base font-medium leading-6 text-text-primary"
-          >
-            {title}
-          </h2>
-          <button
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-button text-text-primary hover:bg-bg-soft active:bg-bg-medium"
-            type="button"
-            aria-label={closeLabel}
-            onClick={closeWithAnimation}
-          >
-            <Icon name="X" />
-          </button>
-        </div>
-        <div className="flex w-full px-6 py-4">
-          <p className="text-sm font-normal leading-5 text-text-primary">
-            {description}
-          </p>
-        </div>
-        <div className="flex w-full flex-col items-end px-6 pb-6 pt-4">
-          <div className="flex items-center justify-end gap-2">
-            <Button variant="secondary" size="lg" onClick={closeWithAnimation}>
-              取消
-            </Button>
-            <Button
-              variant="warning"
-              size="lg"
-              onClick={confirmWithAnimation}
-            >
-              删除
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <ConfirmModal
+      title={title}
+      description={description}
+      confirmText="删除"
+      confirmVariant="warning"
+      closeLabel={closeLabel}
+      ariaLabel={ariaLabel}
+      onClose={onClose}
+      onConfirm={onConfirm}
+    />
   );
 }
 
@@ -5701,6 +5917,8 @@ export function HomePage() {
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
+  const [selectedAgentDetail, setSelectedAgentDetail] =
+    useState<AgentCardData | null>(null);
   const [isMarkAllReadModalOpen, setIsMarkAllReadModalOpen] = useState(false);
   const [markAllReadTargetMode, setMarkAllReadTargetMode] =
     useState<MessageMode>('announcements');
@@ -5729,6 +5947,12 @@ export function HomePage() {
   >(null);
   const [deletingProjectTaskKey, setDeletingProjectTaskKey] = useState<
     string | null
+  >(null);
+  const [renamingProjectFileKey, setRenamingProjectFileKey] = useState<
+    string | null
+  >(null);
+  const [deletingProjectFileKeys, setDeletingProjectFileKeys] = useState<
+    string[] | null
   >(null);
   const [currentUser, setCurrentUser] = useState<MockUser | null>(() =>
     getCurrentMockUser(),
@@ -5804,6 +6028,7 @@ export function HomePage() {
     window.addEventListener(mockProjectsChangedEventName, syncCurrentUser);
     window.addEventListener(mockAccountChangedEventName, syncCurrentUser);
     window.addEventListener('storage', syncCurrentUser);
+    syncCurrentUser();
 
     return () => {
       window.removeEventListener(mockUserChangedEventName, syncCurrentUser);
@@ -5875,6 +6100,7 @@ export function HomePage() {
       ? projectItems.find((project) => project.id === projectDetailId) ?? null
       : null;
   const projectDetailItems = currentProjectDetail?.items ?? [];
+  const projectDetailFiles = currentProjectDetail?.files ?? [];
   const renamingProjectTask =
     renamingProjectTaskKey !== null
       ? projectDetailItems.find(
@@ -5887,6 +6113,18 @@ export function HomePage() {
           (item) => getProjectTaskKey(item) === deletingProjectTaskKey,
         ) ?? null
       : null;
+  const renamingProjectFile =
+    renamingProjectFileKey !== null
+      ? projectDetailFiles.find(
+          (file) => getProjectFileKey(file) === renamingProjectFileKey,
+        ) ?? null
+      : null;
+  const deletingProjectFiles =
+    deletingProjectFileKeys !== null
+      ? projectDetailFiles.filter((file) =>
+          deletingProjectFileKeys.includes(getProjectFileKey(file)),
+        )
+      : [];
   const isProjectDetailPage =
     activePage === 'projects' &&
     projectDetailId !== null &&
@@ -5904,7 +6142,9 @@ export function HomePage() {
     renamingProjectId !== null ||
     deletingProjectId !== null ||
     renamingProjectTaskKey !== null ||
-    deletingProjectTaskKey !== null;
+    deletingProjectTaskKey !== null ||
+    renamingProjectFileKey !== null ||
+    deletingProjectFileKeys !== null;
   const stickyStartScrollTop =
     isProjectDetailPage
       ? contentTitleHeight
@@ -5969,6 +6209,23 @@ export function HomePage() {
 
     return searchableText.includes(normalizedSearchValue);
   });
+  const filteredProjectDetailFiles = projectDetailFiles
+    .filter((file) => {
+      if (normalizedSearchValue.length === 0) {
+        return true;
+      }
+
+      const searchableText = `${file.name} ${file.type}`.toLowerCase();
+
+      return searchableText.includes(normalizedSearchValue);
+    })
+    .sort((firstFile, secondFile) => {
+      if (activeTab === '名称') {
+        return firstFile.name.localeCompare(secondFile.name, 'zh-Hans-CN');
+      }
+
+      return secondFile.date.localeCompare(firstFile.date);
+    });
   const filteredBillingDetails =
     normalizedSearchValue.length === 0
       ? accountData.billingDetails
@@ -6248,6 +6505,7 @@ export function HomePage() {
     filteredWorkflows.length,
     filteredProjects.length,
     filteredProjectDetailItems.length,
+    filteredProjectDetailFiles.length,
     filteredBillingDetails.length,
     filteredMessages.length,
     filteredProductBillingDetails.length,
@@ -6335,6 +6593,7 @@ export function HomePage() {
       count: 0,
       createdAt: formatProjectCreatedAt(),
       items: [],
+      files: [],
     };
 
     updateProjectItems((currentProjects) => [createdProject, ...currentProjects]);
@@ -6388,6 +6647,7 @@ export function HomePage() {
           : project,
       ),
     );
+    setDeletingProjectFileKeys(null);
   }
 
   function handleDeleteProjectTask(taskKey: string) {
@@ -6409,6 +6669,46 @@ export function HomePage() {
           items: nextItems,
         };
       }),
+    );
+  }
+
+  function handleRenameProjectFile(fileKey: string, fileName: string) {
+    const nextFileName = fileName.trim();
+    if (!nextFileName || projectDetailId === null) return;
+
+    updateProjectItems((currentProjects) =>
+      currentProjects.map((project) =>
+        project.id === projectDetailId
+          ? {
+              ...project,
+              files: (project.files ?? []).map((file) =>
+                getProjectFileKey(file) === fileKey
+                  ? { ...file, name: nextFileName }
+                  : file,
+              ),
+            }
+          : project,
+      ),
+    );
+    setRenamingProjectFileKey(null);
+  }
+
+  function handleDeleteProjectFiles(fileKeys: string[]) {
+    if (projectDetailId === null || fileKeys.length === 0) return;
+
+    const fileKeySet = new Set(fileKeys);
+
+    updateProjectItems((currentProjects) =>
+      currentProjects.map((project) =>
+        project.id === projectDetailId
+          ? {
+              ...project,
+              files: (project.files ?? []).filter(
+                (file) => !fileKeySet.has(getProjectFileKey(file)),
+              ),
+            }
+          : project,
+      ),
     );
   }
 
@@ -6439,7 +6739,7 @@ export function HomePage() {
   function handleProjectDetailModeChange(nextMode: ProjectDetailMode) {
     prepareContentReflow();
     setProjectDetailMode(nextMode);
-    setActiveTab(projectDetailTabs[0]);
+    setActiveTab(nextMode === '文件' ? projectTabs[0] : projectDetailTabs[0]);
     setSearchValue('');
   }
 
@@ -6757,12 +7057,17 @@ export function HomePage() {
               searchValue={searchValue}
               onSearchValueChange={handleSearchValueChange}
               tasksToShow={filteredProjectDetailItems}
+              filesToShow={filteredProjectDetailFiles}
               onRenameTask={(item) =>
                 setRenamingProjectTaskKey(getProjectTaskKey(item))
               }
               onDeleteTask={(item) =>
                 setDeletingProjectTaskKey(getProjectTaskKey(item))
               }
+              onRenameFile={(file) =>
+                setRenamingProjectFileKey(getProjectFileKey(file))
+              }
+              onRequestDeleteFiles={setDeletingProjectFileKeys}
             />
           ) : (
             <>
@@ -6787,7 +7092,7 @@ export function HomePage() {
               />
               <div className="home-sticky-spacer" aria-hidden="true" />
               <div className="home-results-scroll">
-                <section className="home-results-content px-12">
+                <section className="home-results-content page-section-x">
                   {activePage === 'projects' ? (
                     <ProjectList
                       projectsToShow={filteredProjects}
@@ -6825,7 +7130,10 @@ export function HomePage() {
                       onToggleMessage={handleMessageToggle}
                     />
                   ) : viewMode === 'agents' ? (
-                    <CardContainer cardsToShow={filteredCards} />
+                    <CardContainer
+                      cardsToShow={filteredCards}
+                      onOpenAgentDetail={setSelectedAgentDetail}
+                    />
                   ) : (
                     <WorkflowCardContainer workflowsToShow={filteredWorkflows} />
                   )}
@@ -6848,6 +7156,12 @@ export function HomePage() {
       )}
       {isRechargeModalOpen && (
         <RechargeModal onClose={() => setIsRechargeModalOpen(false)} />
+      )}
+      {selectedAgentDetail && (
+        <AgentDetailModal
+          agent={selectedAgentDetail}
+          onClose={() => setSelectedAgentDetail(null)}
+        />
       )}
       {isLoginModalOpen && (
         <LoginModal
@@ -6960,6 +7274,37 @@ export function HomePage() {
           ariaLabel={`删除${deletingProjectTask.title}任务确认`}
           onClose={() => setDeletingProjectTaskKey(null)}
           onConfirm={() => handleDeleteProjectTask(deletingProjectTaskKey)}
+        />
+      )}
+      {renamingProjectFile && renamingProjectFileKey && (
+        <ProjectNameModal
+          title="修改文件名称"
+          initialValue={renamingProjectFile.name}
+          placeholder="请输入文件名称"
+          focusPlacement="end"
+          onClose={() => setRenamingProjectFileKey(null)}
+          onConfirm={(fileName) =>
+            handleRenameProjectFile(renamingProjectFileKey, fileName)
+          }
+        />
+      )}
+      {deletingProjectFileKeys && deletingProjectFiles.length > 0 && (
+        <ProjectDeleteModal
+          projectTitle={
+            deletingProjectFiles.length === 1
+              ? deletingProjectFiles[0].name
+              : `${deletingProjectFiles.length} 个文件`
+          }
+          title="删除文件？"
+          description={
+            deletingProjectFiles.length === 1
+              ? `确定要删除「${deletingProjectFiles[0].name}」吗？删除后文件将被永久删除，且不可恢复。`
+              : `确定要删除选中的 ${deletingProjectFiles.length} 个文件吗？删除后文件将被永久删除，且不可恢复。`
+          }
+          closeLabel="关闭删除文件弹窗"
+          ariaLabel="删除文件确认"
+          onClose={() => setDeletingProjectFileKeys(null)}
+          onConfirm={() => handleDeleteProjectFiles(deletingProjectFileKeys)}
         />
       )}
     </div>

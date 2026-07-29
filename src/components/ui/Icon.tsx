@@ -13,7 +13,9 @@ import {
   CircleUserRound,
   Clock4,
   Cloud,
+  Download,
   Ellipsis,
+  FolderInput,
   FolderMinus,
   FolderOpen,
   Headset,
@@ -29,6 +31,7 @@ import {
   LoaderCircle,
   MailCheck,
   MailOpen,
+  Minus,
   PanelLeft,
   Plus,
   ReceiptText,
@@ -62,7 +65,9 @@ const icons = {
   CircleUserRound,
   Clock4,
   Cloud,
+  Download,
   Ellipsis,
+  FolderInput,
   FolderMinus,
   FolderOpen,
   Headset,
@@ -78,6 +83,7 @@ const icons = {
   LoaderCircle,
   MailCheck,
   MailOpen,
+  Minus,
   PanelLeft,
   Plus,
   ReceiptText,
@@ -105,8 +111,8 @@ const iconSizes = {
   '2xl': { size: 32, visualStrokeWidth: 2 },
 };
 
-type IconName = keyof typeof icons;
-type IconSize = keyof typeof iconSizes;
+export type IconName = keyof typeof icons;
+export type IconSize = keyof typeof iconSizes;
 
 type IconProps = {
   name: IconName;
