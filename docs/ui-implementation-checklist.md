@@ -16,7 +16,7 @@
 - 右侧顶部 fixed 导航也要锁定最小适配宽度：展开侧栏 `min-width: 784px`，收起侧栏 `min-width: 972px`，不得在小于 `1024px` 时继续压缩。
 - 通用图标使用 `Icon` 组件，图标名称沿用 Figma / Lucide 原始名称。
 - 默认图标使用 `md`，即 `16px / 1px`；其他常规尺寸只使用 `sm`、`lg`、`xl`、`2xl`；`xs` 只用于控件内部极小图标。
-- 页面操作优先使用 `Button` 或 `ButtonLink`；线框按钮和文字按钮按背景传入 `surface="white"` 或 `surface="soft"`，链接按钮单独使用 `ButtonLink tone="black" | "red" | "yellow" | "green" | "blue"`，不要在页面内手写按钮颜色、尺寸和圆角。
+- 页面操作优先使用 `Button`；正文、列表和说明区域中的文字链接使用 `TextLink tone="black" | "red" | "yellow" | "green" | "blue"`，线框按钮和文字按钮按背景传入 `surface="white"` 或 `surface="soft"`，不要在页面内手写按钮或文字链接的颜色、尺寸和圆角。
 - 带文字的图标按钮使用 `Button icon="..."`，不要在按钮内容中手写 `Icon` 和 margin；`40/36/32` 按钮内图标为 `16px`，`28/24` 按钮内图标为 `14px`，图标与文字间距固定 `6px`。
 - 仅图标操作使用 `IconButton`，必须传入 `aria-label`；全圆角按钮使用 `Button shape="pill"` 或 `IconButton shape="pill"`。
 - `IconButton` 所有按钮尺寸中的默认图标均为 `16px`。
@@ -34,6 +34,7 @@
 - 浮窗打开后页面滚动时必须跟随触发件移动，不得为了上下 `48px` 安全区吸附停留在窗口内；搜索型浮窗无结果高度使用上一次非空内容高度。
 - 模态弹窗优先使用已封装控件：`InfoModal`、`ConfirmModal`、`FormModal`、`FeatureModal`、`ContentModal`、`WorkflowModal`；复杂业务弹窗可作为对应模式下的业务实例，但底层必须复用 `Modal`。
 - 新增模态弹窗时先判断尺寸档，再判断模式：`360 InfoModal`、`480 ConfirmModal / FormModal`、`640 FeatureModal`、`720 ContentModal`、`960 WorkflowModal`。
+- 模态弹窗最大高度统一按窗口上下各 `80px` 安全间距限制；内容超出时只滚动 Body，Header/Footer 不参与滚动。
 - 弹窗遮罩关闭必须判断按下和释放都在遮罩上；从弹窗内容区按下后拖出释放，不得关闭弹窗。
 - 新增或修改封装控件时，必须同步更新 `src/pages/DesignSystemPage.tsx` 设计规范实时预览页。
 - 设计规范实时预览页只负责排列和说明，必须直接引用封装控件，不得覆盖控件本身样式。

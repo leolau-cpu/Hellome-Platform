@@ -236,5 +236,3 @@ export function TextLink({
     </a>
   );
 }
-
-export const ButtonLink = TextLink;

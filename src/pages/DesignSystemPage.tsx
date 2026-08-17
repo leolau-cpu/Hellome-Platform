@@ -132,12 +132,22 @@ const colorGroups = [
 ] as const;
 
 const typographyItems = [
-  { token: 'text-xs', className: 'text-xs', sample: '辅助信息 / Caption' },
-  { token: 'text-sm', className: 'text-sm', sample: '正文文本 / Body' },
-  { token: 'text-base', className: 'text-base', sample: '强调正文 / Body Large' },
-  { token: 'text-lg', className: 'text-lg', sample: '小标题 / Section Title' },
-  { token: 'text-xl', className: 'text-xl', sample: '模块标题 / Module Title' },
-  { token: 'text-2xl', className: 'text-2xl', sample: '页面标题 / Page Title' },
+  { token: 'text-xxs', className: 'text-xxs', fontSize: '10px', lineHeight: '13px', sample: '极小状态标签 / Tiny Badge' },
+  { token: 'text-label', className: 'text-label', fontSize: '11px', lineHeight: '14px', sample: '极小角标 / Micro Label' },
+  { token: 'text-xs', className: 'text-xs', fontSize: '12px', lineHeight: '16px', sample: '辅助信息 / Caption' },
+  { token: 'text-sm', className: 'text-sm', fontSize: '14px', lineHeight: '20px', sample: '正文文本 / Body' },
+  { token: 'text-base', className: 'text-base', fontSize: '16px', lineHeight: '24px', sample: '强调正文 / Body Large' },
+  { token: 'text-lg', className: 'text-lg', fontSize: '18px', lineHeight: '26px', sample: '小标题 / Section Title' },
+  { token: 'text-xl', className: 'text-xl', fontSize: '20px', lineHeight: '28px', sample: '模块标题 / Module Title' },
+  { token: 'text-2xl', className: 'text-2xl', fontSize: '24px', lineHeight: '32px', sample: '页面标题 / Page Title' },
+  { token: 'text-3xl', className: 'text-3xl', fontSize: '28px', lineHeight: '36px', sample: '首屏标题 / Hero Title' },
+  { token: 'text-4xl', className: 'text-4xl', fontSize: '32px', lineHeight: '40px', sample: '大标题 / Large Title' },
+  { token: 'text-5xl', className: 'text-5xl', fontSize: '36px', lineHeight: '44px', sample: '强视觉标题 / Display Title' },
+  { token: 'text-6xl', className: 'text-6xl', fontSize: '40px', lineHeight: '48px', sample: '首页主标题 / Home Title' },
+  { token: 'text-7xl', className: 'text-7xl', fontSize: '48px', lineHeight: '56px', sample: '大型展示标题 / Display Large' },
+  { token: 'text-8xl', className: 'text-8xl', fontSize: '56px', lineHeight: '64px', sample: '特殊营销标题 / Marketing Title' },
+  { token: 'text-9xl', className: 'text-9xl', fontSize: '64px', lineHeight: '72px', sample: '特殊超大标题 / Display Huge' },
+  { token: 'text-10xl', className: 'text-10xl', fontSize: '72px', lineHeight: '80px', sample: '品牌展示标题 / Brand Display' },
 ] as const;
 
 function PreviewCanvas({ children }: { children: ReactNode }) {
@@ -540,9 +550,14 @@ export function DesignSystemPage() {
           <div className="grid gap-1">
             {typographyItems.map((item) => (
               <Row key={item.token} label={item.token}>
-                <span className={`${item.className} text-text-primary`}>
-                  {item.sample}
-                </span>
+                <div className="flex min-w-0 flex-1 items-center justify-between gap-6">
+                  <span className={`${item.className} min-w-0 text-text-primary`}>
+                    {item.sample}
+                  </span>
+                  <span className="shrink-0 text-sm leading-5 text-text-hint">
+                    {item.fontSize} / {item.lineHeight}
+                  </span>
+                </div>
               </Row>
             ))}
             <Row label="font-logo">
@@ -1055,7 +1070,7 @@ export function DesignSystemPage() {
           index="11"
           name="Modal"
           title="模态弹窗"
-          description="Modal 按尺寸档沉淀模式控件：360 InfoModal、480 ConfirmModal / FormModal、640 FeatureModal、720 ContentModal、960 WorkflowModal。页面优先使用模式控件，复杂业务弹窗作为对应模式下的业务实例。"
+          description="Modal 按尺寸档沉淀模式控件：360 InfoModal、480 ConfirmModal / FormModal、640 FeatureModal、720 ContentModal、960 WorkflowModal。最大高度按窗口上下各 80px 安全间距限制，内容超出时只滚动 Body，Header / Footer 保持可见。"
         >
           <div className="grid gap-1">
             <Row label="360 / InfoModal">
@@ -1105,6 +1120,11 @@ export function DesignSystemPage() {
               >
                 打开流程弹窗
               </Button>
+            </Row>
+            <Row label="Max height">
+              <p className="text-sm leading-5 text-text-secondary">
+                `calc(100vh - 160px)`，上下最小间距 80px，超出内容在 Body 内部滚动。
+              </p>
             </Row>
           </div>
         </Section>
@@ -1186,7 +1206,7 @@ export function DesignSystemPage() {
               内容区域应独立滚动，标题栏保持稳定。这里展示的是结构预览，业务页面可以在标题区放置 Tab 或其他内容导航。
             </p>
             <p>
-              当内容很长时，不要让整个页面滚动；只滚动弹窗内容区，避免关闭按钮和操作区域离开视野。
+              当内容很长时，不要让整个页面滚动；只滚动弹窗 Body 内容区，避免关闭按钮和操作区域离开视野。Modal 容器最大高度统一保留窗口上下各 80px。
             </p>
           </div>
         </ContentModal>

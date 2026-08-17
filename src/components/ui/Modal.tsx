@@ -193,7 +193,7 @@ export function Modal({
     >
       <div
         className={mergeClassNames(
-          'flex shrink-0 flex-col overflow-hidden rounded-modal bg-bg-white shadow-card-hover transition-all duration-200 ease-out',
+          'flex max-h-[calc(100vh-160px)] shrink-0 flex-col overflow-hidden rounded-modal bg-bg-white shadow-card-hover transition-all duration-200 ease-out',
           modalSizeClassNames[size],
           isVisible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-2 scale-95 opacity-0',
           panelClassName,
@@ -234,7 +234,7 @@ export function Modal({
 
         <div
           className={mergeClassNames(
-            'min-h-0 flex-1',
+            'min-h-0 flex-1 overflow-y-auto',
             bodyPadding && 'px-6 py-4',
             bodyClassName,
           )}

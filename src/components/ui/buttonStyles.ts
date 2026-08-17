@@ -3,7 +3,6 @@ export type ButtonSize = 'xl' | 'lg' | 'md' | 'sm' | 'xs';
 export type ButtonSurface = 'white' | 'soft';
 export type ButtonShape = 'default' | 'pill';
 export type TextLinkTone = 'black' | 'red' | 'yellow' | 'green' | 'blue';
-export type ButtonLinkTone = TextLinkTone;
 
 const sizeClassNames: Record<ButtonSize, string> = {
   xl: 'min-h-10 px-5 py-2.5 text-sm',
@@ -152,5 +151,3 @@ export function textLinkClassName({
     className,
   );
 }
-
-export const buttonLinkClassName = textLinkClassName;

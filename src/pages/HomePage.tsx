@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { ChangeEvent, ReactNode, Ref, RefObject } from 'react';
+import type { CSSProperties, ChangeEvent, ReactNode, Ref, RefObject } from 'react';
 import {
   defaultProfileNickname,
   getCurrentMockUser,
@@ -32,9 +32,13 @@ import {
   type MockProjectItem,
 } from '../api/mock/mockProjectApi';
 import {
+  addMockExtraAccountData,
   getMockAccountData,
   mockAccountChangedEventName,
+  resetMockExtraAccountData,
   resetMockAccountData,
+  updateMockAccountName,
+  type MockAccount,
   type MockAccountData,
   type MockAccountStat,
   type MockBillingDetail,
@@ -54,6 +58,7 @@ import {
   ContentModal,
   FormModal,
   InfoModal,
+  Modal,
   WorkflowModal,
 } from '../components/ui/Modal';
 import { NotificationPopover } from '../components/ui/NotificationPopover';
@@ -62,6 +67,7 @@ import {
   PopoverMenu,
   PopoverDivider,
   PopoverItem,
+  PopoverPanel,
   PopoverSection,
   PopoverOptions,
   type PopoverOptionsWidth,
@@ -660,6 +666,38 @@ const accountStats: MockAccountStat[] = [
   },
 ];
 
+const accounts: MockAccount[] = [
+  {
+    id: 'account-personal-default',
+    name: '个人账户',
+    type: 'personal',
+    status: '正常',
+    balance: '512.00',
+    apiKeyCount: 2,
+    createdAt: '2026/05/26',
+  },
+  {
+    id: 'account-enterprise-owner',
+    name: '江苏汇智智能数字科技有限公司',
+    type: 'enterprise',
+    enterpriseRole: 'owner',
+    status: '正常',
+    balance: '8,640.00',
+    apiKeyCount: 6,
+    createdAt: '2026/06/02',
+  },
+  {
+    id: 'account-enterprise-employee',
+    name: '南京汇智互娱有限公司',
+    type: 'enterprise',
+    enterpriseRole: 'employee',
+    status: '正常',
+    balance: '企业共享',
+    apiKeyCount: 1,
+    createdAt: '2026/06/12',
+  },
+];
+
 const billingDetails: MockBillingDetail[] = [
   {
     id: 'bill-50',
@@ -932,6 +970,7 @@ const requestBillingDetails: MockRequestBillingDetail[] = [
 ];
 
 const seededAccountData: MockAccountData = {
+  accounts,
   stats: accountStats,
   billingDetails,
   productBillingDetails,
@@ -963,10 +1002,11 @@ function getProjectFileKey(file: ProjectFile) {
 }
 
 const profileMenuItems = [
+  { icon: 'ArrowRightLeft', label: '切换账号' },
   { icon: 'UserPen', label: '个人资料' },
+  { icon: 'Headset', label: '联系客服' },
   { icon: 'ShieldCheck', label: '政策/协议' },
   { icon: 'Info', label: '关于我们' },
-  { icon: 'Headset', label: '联系客服' },
   { icon: 'LogOut', label: '退出登录' },
 ] as const satisfies ReadonlyArray<{ icon: IconName; label: string }>;
 
@@ -1156,6 +1196,7 @@ function Logo({
 function SidebarItem({
   icon,
   avatarSrc,
+  avatarAccount,
   label,
   badge,
   active = false,
@@ -1165,6 +1206,7 @@ function SidebarItem({
 }: {
   icon?: IconName;
   avatarSrc?: string;
+  avatarAccount?: MockAccount | null;
   label: string;
   badge?: number;
   active?: boolean;
@@ -1191,9 +1233,11 @@ function SidebarItem({
         ].join(' ')}
       >
         {avatarSrc ? (
-          <span className="h-4 w-4 shrink-0 overflow-hidden rounded-pill shadow-avatar-border">
-            <img className="h-full w-full object-cover" src={avatarSrc} alt="" />
-          </span>
+          <AccountAvatar
+            account={avatarAccount ?? null}
+            avatarSrc={avatarSrc}
+            size="sm"
+          />
         ) : icon ? (
           <Icon name={icon} className="shrink-0" />
         ) : null}
@@ -1214,6 +1258,13 @@ function SidebarItem({
 
 function ProfilePopover({
   popoverRef,
+  accounts,
+  avatarSrc,
+  nickname,
+  phone,
+  selectedAccountId,
+  onAccountSelect,
+  onLoginMoreAccountsClick,
   onProfileClick,
   onPolicyClick,
   onAboutClick,
@@ -1221,12 +1272,21 @@ function ProfilePopover({
   onLogoutClick,
 }: {
   popoverRef: Ref<HTMLDivElement>;
+  accounts: MockAccount[];
+  avatarSrc: string;
+  nickname: string;
+  phone: string;
+  selectedAccountId: string | null;
+  onAccountSelect: (accountId: string) => void;
+  onLoginMoreAccountsClick: () => void;
   onProfileClick: () => void;
   onPolicyClick: () => void;
   onAboutClick: () => void;
   onSupportClick: () => void;
   onLogoutClick: () => void;
 }) {
+  const [isAccountSwitcherOpen, setIsAccountSwitcherOpen] = useState(false);
+
   return (
     <Popover
       ref={popoverRef}
@@ -1234,27 +1294,49 @@ function ProfilePopover({
       position="fixed"
       align="none"
       offset={null}
-      className="bottom-12 left-2 z-50 h-[328px]"
+      className="bottom-12 left-2 z-50 h-[364px]"
     >
-      <div className="flex h-[312px] w-full flex-col">
+      {isAccountSwitcherOpen && (
+        <AccountSwitcherPopover
+          accounts={accounts}
+          avatarSrc={avatarSrc}
+          nickname={nickname}
+          phone={phone}
+          selectedAccountId={selectedAccountId}
+          className="left-[calc(100%+4px)]"
+          topOffset={0}
+          onAccountSelect={onAccountSelect}
+          onLoginMoreAccountsClick={onLoginMoreAccountsClick}
+        />
+      )}
+      <div className="flex h-[348px] w-full flex-col">
         {profileMenuItems.map((item) => (
           <button
             key={item.label}
             className="group flex h-9 w-full items-center px-2 text-left"
             type="button"
             onClick={
-              item.label === '个人资料'
-                ? onProfileClick
-                : item.label === '政策/协议'
-                  ? onPolicyClick
-                  : item.label === '关于我们'
-                    ? onAboutClick
-                    : item.label === '联系客服'
-                      ? onSupportClick
-                      : onLogoutClick
+              item.label === '切换账号'
+                ? () => setIsAccountSwitcherOpen((currentValue) => !currentValue)
+                : item.label === '个人资料'
+                  ? onProfileClick
+                  : item.label === '联系客服'
+                    ? onSupportClick
+                    : item.label === '政策/协议'
+                      ? onPolicyClick
+                      : item.label === '关于我们'
+                        ? onAboutClick
+                        : onLogoutClick
             }
           >
-            <span className="flex h-9 w-full items-center gap-2 rounded-button px-2 text-sm leading-5 text-text-primary hover:bg-bg-soft active:bg-bg-medium">
+            <span
+              className={[
+                'flex h-9 w-full items-center gap-2 rounded-button px-2 text-sm leading-5 text-text-primary hover:bg-bg-soft active:bg-bg-medium',
+                item.label === '切换账号' && isAccountSwitcherOpen
+                  ? '!bg-bg-medium hover:!bg-bg-medium active:!bg-bg-medium'
+                  : '',
+              ].join(' ')}
+            >
               <Icon name={item.icon} className="shrink-0" />
               <span className="min-w-0 flex-1 truncate">{item.label}</span>
               {item.label === '关于我们' && (
@@ -1307,26 +1389,565 @@ function ProfilePopover({
   );
 }
 
+function getSwitcherAccountTypeBadge(account: MockAccount) {
+  if (account.type === 'personal') return '个人';
+
+  return '企业';
+}
+
+function getSwitcherEnterpriseRoleBadge(account: MockAccount) {
+  if (account.type !== 'enterprise') return null;
+
+  return account.enterpriseRole === 'owner' ? '拥有' : '员工';
+}
+
+function getAccountInitial(accountName: string) {
+  return accountName.trim().charAt(0) || '企';
+}
+
+function getAccountDisplayName(account: MockAccount | null, nickname: string) {
+  if (account?.type === 'enterprise') return account.name;
+
+  return nickname;
+}
+
+function CertifiedBadgeIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-3 w-3 shrink-0 text-text-success"
+      fill="none"
+      focusable="false"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        className="fill-current stroke-current"
+        d="M3.85 8.62a4 4 0 0 1 4.78-4.77 4 4 0 0 1 6.74 0 4 4 0 0 1 4.78 4.78 4 4 0 0 1 0 6.74 4 4 0 0 1-4.77 4.78 4 4 0 0 1-6.75 0 4 4 0 0 1-4.78-4.77 4 4 0 0 1 0-6.76Z"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+      />
+      <path
+        className="stroke-text-inverse"
+        d="m9 12 2 2 4-4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
+function SelectedAccountCheckIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-4 w-4 shrink-0 text-text-success"
+      fill="none"
+      focusable="false"
+      viewBox="0 0 24 24"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <circle
+        className="fill-current stroke-current"
+        cx="12"
+        cy="12"
+        r="10"
+        strokeWidth="1.5"
+      />
+      <path
+        className="stroke-text-inverse"
+        d="m9 12 2 2 4-4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.5"
+      />
+    </svg>
+  );
+}
+
+function AccountAvatar({
+  account,
+  avatarSrc,
+  size = 'md',
+}: {
+  account: MockAccount | null;
+  avatarSrc: string;
+  size?: 'sm' | 'md' | 'lg';
+}) {
+  const sizeClassName =
+    size === 'sm' ? 'h-4 w-4 text-xxs' : size === 'lg' ? 'h-9 w-9 text-sm' : 'h-8 w-8 text-sm';
+
+  if (account?.type === 'enterprise') {
+    return (
+      <span
+        className={[
+          'flex shrink-0 items-center justify-center rounded-pill bg-bg-black font-medium leading-5 text-text-inverse',
+          sizeClassName,
+        ].join(' ')}
+      >
+        {getAccountInitial(account.name)}
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className={[
+        'shrink-0 overflow-hidden rounded-pill shadow-avatar-border',
+        sizeClassName,
+      ].join(' ')}
+    >
+      <img className="h-full w-full object-cover" src={avatarSrc} alt="" />
+    </span>
+  );
+}
+
+function AccountSwitcherRow({
+  account,
+  avatarSrc,
+  nickname,
+  phone,
+  selected,
+  density = 'popover',
+  onSelect,
+}: {
+  account: MockAccount;
+  avatarSrc: string;
+  nickname: string;
+  phone: string;
+  selected: boolean;
+  density?: 'popover' | 'modal';
+  onSelect: () => void;
+}) {
+  const isPersonal = account.type === 'personal';
+  const roleBadge = getSwitcherEnterpriseRoleBadge(account);
+  const outerPaddingClassName = density === 'modal' ? 'px-3' : 'px-2';
+  const innerPaddingClassName = density === 'modal' ? 'p-3' : 'p-2';
+
+  return (
+    <button
+      className={['flex w-full items-center text-left', outerPaddingClassName].join(' ')}
+      type="button"
+      onClick={onSelect}
+    >
+      <span
+        className={[
+          'flex min-w-0 flex-1 items-start gap-3 rounded-button hover:bg-bg-soft active:bg-bg-medium',
+          innerPaddingClassName,
+        ].join(' ')}
+      >
+        <span className="flex self-stretch items-center justify-center">
+          <AccountAvatar account={account} avatarSrc={avatarSrc} size="lg" />
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate text-sm leading-5 text-text-primary">
+              {isPersonal ? nickname : account.name}
+            </span>
+            <span className="truncate text-xs leading-4 text-text-secondary">
+              {phone}
+            </span>
+          </span>
+          <span className="flex min-w-0 flex-wrap items-center gap-1">
+            {account.type === 'enterprise' && account.enterpriseRole === 'owner' && (
+              <span className="flex h-4 shrink-0 items-center gap-0.5 rounded-pill bg-accent-success/10 px-1.5 text-xxs font-medium leading-[13px] text-text-success">
+                <CertifiedBadgeIcon />
+                已认证
+              </span>
+            )}
+            <span className="flex h-4 shrink-0 items-center rounded-pill bg-bg-medium px-1.5 text-xxs leading-[13px] text-text-secondary">
+              {getSwitcherAccountTypeBadge(account)}
+            </span>
+            {roleBadge && (
+              <span className="flex h-4 shrink-0 items-center rounded-pill bg-bg-medium px-1.5 text-xxs leading-[13px] text-text-secondary">
+                {roleBadge}
+              </span>
+            )}
+          </span>
+        </span>
+        {selected && (
+          <span className="flex self-stretch items-center justify-end text-text-success">
+            <SelectedAccountCheckIcon />
+          </span>
+        )}
+      </span>
+    </button>
+  );
+}
+
+function AccountSwitcherPopover({
+  accounts,
+  avatarSrc,
+  nickname,
+  phone,
+  selectedAccountId,
+  className = 'right-[calc(100%+4px)]',
+  topOffset = 64,
+  onAccountSelect,
+  onLoginMoreAccountsClick,
+}: {
+  accounts: MockAccount[];
+  avatarSrc: string;
+  nickname: string;
+  phone: string;
+  selectedAccountId: string | null;
+  className?: string;
+  topOffset?: number;
+  onAccountSelect: (accountId: string) => void;
+  onLoginMoreAccountsClick: () => void;
+}) {
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const [panelStyle, setPanelStyle] = useState<CSSProperties>(() => ({
+    maxHeight: 'calc(100vh - 96px)',
+    top: topOffset,
+  }));
+  const visibleAccounts =
+    accounts.length > 0
+      ? accounts
+      : [
+          {
+            id: 'current-personal-account',
+            name: '个人账户',
+            type: 'personal',
+            status: '正常',
+            balance: '0.00',
+            apiKeyCount: 0,
+            createdAt: '',
+          } satisfies MockAccount,
+        ];
+  const resolvedSelectedAccountId =
+    selectedAccountId ?? visibleAccounts[0]?.id ?? null;
+
+  useLayoutEffect(() => {
+    function updatePanelStyle() {
+      const panel = panelRef.current;
+      const parent = panel?.offsetParent;
+
+      if (!panel) return;
+
+      const viewportHeight = window.innerHeight;
+
+      if (!(parent instanceof HTMLElement)) return;
+
+      const parentRect = parent.getBoundingClientRect();
+      const scrollArea = panel.querySelector<HTMLElement>(
+        '[data-account-switcher-scroll]',
+      );
+      const footer = panel.querySelector<HTMLElement>(
+        '[data-account-switcher-footer]',
+      );
+      const preferredTop = parentRect.top + topOffset;
+      const availableBelow = Math.max(196, viewportHeight - preferredTop - 48);
+      const naturalHeight =
+        (scrollArea?.scrollHeight ?? 0) + (footer?.scrollHeight ?? 0) + 16;
+      const nextHeight = Math.min(naturalHeight, Math.max(196, viewportHeight - 96));
+
+      if (naturalHeight <= availableBelow) {
+        setPanelStyle({
+          maxHeight: availableBelow,
+          top: topOffset,
+        });
+        return;
+      }
+
+      const nextTop = Math.max(48, viewportHeight - 48 - nextHeight);
+
+      setPanelStyle({
+        maxHeight: nextHeight,
+        top: nextTop - parentRect.top,
+      });
+    }
+
+    updatePanelStyle();
+    window.addEventListener('resize', updatePanelStyle);
+
+    return () => {
+      window.removeEventListener('resize', updatePanelStyle);
+    };
+  }, [topOffset, visibleAccounts.length]);
+
+  return (
+    <PopoverPanel
+      ref={panelRef}
+      width="lg"
+      position="absolute"
+      align="none"
+      offset={null}
+      constrainHeight={false}
+      shadow="strong"
+      className={`${className} z-50 flex min-h-[196px] flex-col overflow-hidden`}
+      style={panelStyle}
+    >
+      <div
+        className="scrollbar-none flex min-h-0 flex-1 flex-col overflow-y-auto"
+        data-account-switcher-scroll
+      >
+        {visibleAccounts.map((account, index) => (
+          <div key={account.id}>
+            <AccountSwitcherRow
+              account={account}
+              avatarSrc={avatarSrc}
+              nickname={nickname}
+              phone={phone}
+              selected={account.id === resolvedSelectedAccountId}
+              onSelect={() => onAccountSelect(account.id)}
+            />
+            {index < visibleAccounts.length - 1 && <PopoverDivider />}
+          </div>
+        ))}
+      </div>
+      <div className="shrink-0" data-account-switcher-footer>
+        <div className="flex h-3 w-full items-center px-4">
+          <div className="h-px w-full bg-border-subtle" />
+        </div>
+        <button
+          className="flex h-9 w-full items-center px-2 text-left"
+          type="button"
+        >
+          <span className="flex h-9 w-full items-center gap-2 rounded-button px-2 text-sm leading-5 text-text-primary hover:bg-bg-soft active:bg-bg-medium">
+            <Icon name="Building2" className="shrink-0" />
+            <span className="min-w-0 flex-1 truncate">申请企业认证</span>
+          </span>
+        </button>
+        <button
+          className="flex h-9 w-full items-center px-2 text-left"
+          type="button"
+          onClick={onLoginMoreAccountsClick}
+        >
+          <span className="flex h-9 w-full items-center gap-2 rounded-button px-2 text-sm leading-5 text-text-primary hover:bg-bg-soft active:bg-bg-medium">
+            <Icon name="Plus" className="shrink-0" />
+            <span className="min-w-0 flex-1 truncate">登录更多账号</span>
+          </span>
+        </button>
+      </div>
+    </PopoverPanel>
+  );
+}
+
+function LoginAccountSelectionModal({
+  accounts,
+  avatarSrc,
+  nickname,
+  phone,
+  selectedAccountId,
+  onAccountSelect,
+  onClose,
+  onConfirm,
+}: {
+  accounts: MockAccount[];
+  avatarSrc: string;
+  nickname: string;
+  phone: string;
+  selectedAccountId: string | null;
+  onAccountSelect: (accountId: string) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const visibleAccounts = accounts.length > 0 ? accounts : [];
+  const resolvedSelectedAccountId =
+    selectedAccountId ?? visibleAccounts[0]?.id ?? null;
+
+  return (
+    <Modal
+      size="md"
+      title="选择要登录的账号"
+      closeLabel="关闭选择账号弹窗"
+      bodyPadding={false}
+      panelClassName="shadow-card-hover"
+      bodyClassName="scrollbar-none"
+      footerClassName="!flex-row !items-start !justify-between"
+      footer={({ close }) => (
+        <>
+          <Button
+            variant="text"
+            size="lg"
+            surface="white"
+            icon="Building2"
+            className="!px-2"
+            onClick={() => undefined}
+          >
+            申请企业认证
+          </Button>
+          <Button
+            size="lg"
+            disabled={resolvedSelectedAccountId === null}
+            onClick={() => {
+              onConfirm();
+              close();
+            }}
+          >
+            确认登录
+          </Button>
+        </>
+      )}
+      onClose={onClose}
+    >
+      <div className="flex w-full flex-col">
+        {visibleAccounts.map((account) => (
+          <div key={account.id}>
+            <AccountSwitcherRow
+              account={account}
+              avatarSrc={avatarSrc}
+              nickname={nickname}
+              phone={phone}
+              selected={account.id === resolvedSelectedAccountId}
+              density="modal"
+              onSelect={() => onAccountSelect(account.id)}
+            />
+            <div className="flex h-3 w-full items-center px-6">
+              <div className="h-px w-full bg-border-subtle" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </Modal>
+  );
+}
+
+function TopAvatarPopover({
+  popoverRef,
+  anchorRef,
+  avatarSrc,
+  nickname,
+  phone,
+  currentAccount,
+  accounts,
+  selectedAccountId,
+  onAccountSelect,
+  onLoginMoreAccountsClick,
+  onProfileClick,
+  onSupportClick,
+  onLogoutClick,
+}: {
+  popoverRef: Ref<HTMLDivElement>;
+  anchorRef: RefObject<HTMLButtonElement | null>;
+  avatarSrc: string;
+  nickname: string;
+  phone: string;
+  currentAccount: MockAccount | null;
+  accounts: MockAccount[];
+  selectedAccountId: string | null;
+  onAccountSelect: (accountId: string) => void;
+  onLoginMoreAccountsClick: () => void;
+  onProfileClick: () => void;
+  onSupportClick: () => void;
+  onLogoutClick: () => void;
+}) {
+  const [isAccountSwitcherOpen, setIsAccountSwitcherOpen] = useState(false);
+  const menuItems: ReadonlyArray<{
+    icon: IconName;
+    label: string;
+    onClick: () => void;
+    selected?: boolean;
+  }> = [
+    {
+      icon: 'ArrowRightLeft',
+      label: '切换账号',
+      onClick: () => setIsAccountSwitcherOpen((currentValue) => !currentValue),
+      selected: isAccountSwitcherOpen,
+    },
+    { icon: 'UserPen', label: '个人资料', onClick: onProfileClick },
+    { icon: 'Headset', label: '联系客服', onClick: onSupportClick },
+    { icon: 'SquareArrowRight', label: '退出登录', onClick: onLogoutClick },
+  ];
+
+  return (
+    <PopoverPanel
+      ref={popoverRef}
+      width="md"
+      anchorRef={anchorRef}
+      placement="bottom"
+      align="right"
+      offset={4}
+      boundaryPadding={8}
+      constrainHeight={false}
+      repositionOnChildrenChange={false}
+      shadow="strong"
+      className="z-50 overflow-visible"
+    >
+      {isAccountSwitcherOpen && (
+        <AccountSwitcherPopover
+          accounts={accounts}
+          avatarSrc={avatarSrc}
+          nickname={nickname}
+          phone={phone}
+          selectedAccountId={selectedAccountId}
+          onAccountSelect={onAccountSelect}
+          onLoginMoreAccountsClick={onLoginMoreAccountsClick}
+        />
+      )}
+      <div className="flex w-full flex-col">
+        <div className="flex w-full items-center px-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2 rounded-button p-2">
+            <AccountAvatar account={currentAccount} avatarSrc={avatarSrc} />
+            <div className="flex min-w-0 flex-1 flex-col justify-center">
+              <p className="truncate text-sm leading-5 text-text-primary">
+                {getAccountDisplayName(currentAccount, nickname)}
+              </p>
+              <p className="truncate text-xs leading-4 text-text-secondary">
+                {phone}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <PopoverDivider />
+
+        {menuItems.map((item) => (
+          <button
+            key={item.label}
+            className="flex h-9 w-full items-center px-2 text-left"
+            type="button"
+            onClick={item.onClick}
+          >
+            <span
+              className={[
+                'flex h-9 w-full items-center gap-2 rounded-button px-2 text-sm leading-5 text-text-primary hover:bg-bg-soft active:bg-bg-medium',
+                item.selected ? '!bg-bg-medium hover:!bg-bg-medium active:!bg-bg-medium' : '',
+              ].join(' ')}
+            >
+              <Icon name={item.icon} className="shrink-0" />
+              <span className="min-w-0 flex-1 truncate">{item.label}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+    </PopoverPanel>
+  );
+}
+
 function MockDebugPanel({
   currentUser,
+  accounts,
+  selectedAccountId,
   onClose,
   onLoginWithData,
   onLoginEmptyData,
   onLogout,
+  onSelectAccount,
   onResetMessages,
   onResetProjects,
   onResetAccount,
+  onAddExtraAccount,
+  onResetExtraAccounts,
   onPushAnnouncement,
   onPushActivity,
 }: {
   currentUser: MockUser | null;
+  accounts: MockAccount[];
+  selectedAccountId: string | null;
   onClose: () => void;
   onLoginWithData: () => void;
   onLoginEmptyData: () => void;
   onLogout: () => void;
+  onSelectAccount: (accountId: string) => void;
   onResetMessages: () => void;
   onResetProjects: () => void;
   onResetAccount: () => void;
+  onAddExtraAccount: () => void;
+  onResetExtraAccounts: () => void;
   onPushAnnouncement: () => void;
   onPushActivity: () => void;
 }) {
@@ -1337,6 +1958,33 @@ function MockDebugPanel({
       : currentUser.dataMode === 'empty-data'
         ? '已登录没数据'
         : '已登录有数据';
+  const selectedAccount =
+    selectedAccountId !== null
+      ? accounts.find((account) => account.id === selectedAccountId) ?? null
+      : accounts[0] ?? null;
+  const accountShortcuts = [
+    {
+      label: '个人账户',
+      account: accounts.find((account) => account.type === 'personal') ?? null,
+    },
+    {
+      label: '企业拥有者',
+      account:
+        accounts.find(
+          (account) =>
+            account.type === 'enterprise' && account.enterpriseRole === 'owner',
+        ) ?? null,
+    },
+    {
+      label: '企业员工',
+      account:
+        accounts.find(
+          (account) =>
+            account.type === 'enterprise' &&
+            account.enterpriseRole === 'employee',
+        ) ?? null,
+    },
+  ];
 
   return (
     <Popover
@@ -1363,23 +2011,43 @@ function MockDebugPanel({
       <div className="mt-2 rounded-button bg-bg-soft px-3 py-2 text-xs leading-4 text-text-secondary">
         <p>状态：{statusText}</p>
         <p>账号：{currentUser?.phone ?? '-'}</p>
+        <p>当前账户：{selectedAccount?.name ?? '-'}</p>
       </div>
       <div className="mt-3 grid grid-cols-1 gap-2">
-        <Button variant="secondary" size="md" onClick={onLogout}>
+        <Button variant="secondary" size="sm" onClick={onLogout}>
           切到未登录
         </Button>
-        <Button variant="secondary" size="md" onClick={onLoginWithData}>
+        <Button variant="secondary" size="sm" onClick={onLoginWithData}>
           登录有数据账号
         </Button>
-        <Button variant="secondary" size="md" onClick={onLoginEmptyData}>
+        <Button variant="secondary" size="sm" onClick={onLoginEmptyData}>
           登录空数据账号
         </Button>
       </div>
       <div className="mt-3 h-px bg-border-subtle" />
       <div className="mt-3 grid grid-cols-1 gap-2">
+        {accountShortcuts.map((shortcut) => (
+          <Button
+            key={shortcut.label}
+            variant="secondary"
+            size="sm"
+            selected={shortcut.account?.id === selectedAccount?.id}
+            disabled={!isLoggedIn || shortcut.account === null}
+            onClick={() => {
+              if (shortcut.account !== null) {
+                onSelectAccount(shortcut.account.id);
+              }
+            }}
+          >
+            {shortcut.label}
+          </Button>
+        ))}
+      </div>
+      <div className="mt-3 h-px bg-border-subtle" />
+      <div className="mt-3 grid grid-cols-1 gap-2">
         <Button
           variant="secondary"
-          size="md"
+          size="sm"
           disabled={!isLoggedIn}
           onClick={onResetMessages}
         >
@@ -1387,7 +2055,7 @@ function MockDebugPanel({
         </Button>
         <Button
           variant="secondary"
-          size="md"
+          size="sm"
           disabled={!isLoggedIn}
           onClick={onResetProjects}
         >
@@ -1395,7 +2063,7 @@ function MockDebugPanel({
         </Button>
         <Button
           variant="secondary"
-          size="md"
+          size="sm"
           disabled={!isLoggedIn}
           onClick={onResetAccount}
         >
@@ -1403,7 +2071,23 @@ function MockDebugPanel({
         </Button>
         <Button
           variant="secondary"
-          size="md"
+          size="sm"
+          disabled={!isLoggedIn}
+          onClick={onAddExtraAccount}
+        >
+          添加多账号
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={!isLoggedIn}
+          onClick={onResetExtraAccounts}
+        >
+          重置多账号
+        </Button>
+        <Button
+          variant="secondary"
+          size="sm"
           disabled={!isLoggedIn}
           onClick={onPushAnnouncement}
         >
@@ -1411,7 +2095,7 @@ function MockDebugPanel({
         </Button>
         <Button
           variant="secondary"
-          size="md"
+          size="sm"
           disabled={!isLoggedIn}
           onClick={onPushActivity}
         >
@@ -1429,10 +2113,16 @@ function SideNav({
   messageUnreadCount,
   profileAvatarSrc,
   profileLabel,
+  profileNickname,
+  profilePhone,
+  currentAccount,
+  accounts,
+  selectedAccountId,
   isLoggedIn,
   onToggle,
   onPageChange,
   onLoginClick,
+  onAccountSelect,
   onProfileClick,
   onPolicyClick,
   onSupportClick,
@@ -1447,10 +2137,16 @@ function SideNav({
   messageUnreadCount: number;
   profileAvatarSrc?: string;
   profileLabel: string;
+  profileNickname: string;
+  profilePhone: string;
+  currentAccount: MockAccount | null;
+  accounts: MockAccount[];
+  selectedAccountId: string | null;
   isLoggedIn: boolean;
   onToggle: () => void;
   onPageChange: (value: PageMode) => void;
   onLoginClick: () => void;
+  onAccountSelect: (accountId: string) => void;
   onProfileClick: () => void;
   onPolicyClick: () => void;
   onSupportClick: () => void;
@@ -1606,6 +2302,7 @@ function SideNav({
         <SidebarItem
           icon={isLoggedIn ? undefined : 'CircleUserRound'}
           avatarSrc={isLoggedIn ? profileAvatarSrc : undefined}
+          avatarAccount={currentAccount}
           label={profileLabel}
           active={isLoggedIn && isProfilePopoverOpen}
           collapsed={collapsed}
@@ -1619,6 +2316,19 @@ function SideNav({
         {isLoggedIn && isProfilePopoverOpen && (
           <ProfilePopover
             popoverRef={profilePopoverRef}
+            accounts={accounts}
+            avatarSrc={profileAvatarSrc ?? '/assets/home/Avatar.png'}
+            nickname={profileNickname}
+            phone={profilePhone}
+            selectedAccountId={selectedAccountId}
+            onAccountSelect={(accountId) => {
+              setIsProfilePopoverOpen(false);
+              onAccountSelect(accountId);
+            }}
+            onLoginMoreAccountsClick={() => {
+              setIsProfilePopoverOpen(false);
+              onLoginClick();
+            }}
             onProfileClick={() => {
               setIsProfilePopoverOpen(false);
               onProfileClick();
@@ -1850,8 +2560,18 @@ function TitleBar({
   showDivider,
   sidebarCollapsed,
   isLoggedIn,
+  accountsToShow,
+  currentAccount,
+  selectedAccountId,
   profileAvatarSrc,
+  profileNickname,
+  profilePhone,
   onLoginClick,
+  onSwitchAccountClick,
+  onAccountSelect,
+  onProfileClick,
+  onSupportClick,
+  onLogoutClick,
   projectDetailTitle,
   onProjectDetailBack,
   projectDetailMenuOpen = false,
@@ -1885,8 +2605,18 @@ function TitleBar({
   showDivider: boolean;
   sidebarCollapsed: boolean;
   isLoggedIn: boolean;
+  accountsToShow: MockAccount[];
+  currentAccount: MockAccount | null;
+  selectedAccountId: string | null;
   profileAvatarSrc: string;
+  profileNickname: string;
+  profilePhone: string;
   onLoginClick: () => void;
+  onSwitchAccountClick: () => void;
+  onAccountSelect: (accountId: string) => void;
+  onProfileClick: () => void;
+  onSupportClick: () => void;
+  onLogoutClick: () => void;
   projectDetailTitle?: string | null;
   onProjectDetailBack?: () => void;
   projectDetailMenuOpen?: boolean;
@@ -1897,6 +2627,41 @@ function TitleBar({
 }) {
   const showLeftContent = showModeTabs || Boolean(projectDetailTitle);
   const notificationTriggerRef = useRef<HTMLDivElement | null>(null);
+  const topAvatarButtonRef = useRef<HTMLButtonElement | null>(null);
+  const topAvatarPopoverRef = useRef<HTMLDivElement | null>(null);
+  const [isTopAvatarPopoverOpen, setIsTopAvatarPopoverOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isTopAvatarPopoverOpen) {
+      return undefined;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node | null;
+
+      if (
+        target &&
+        (topAvatarButtonRef.current?.contains(target) ||
+          topAvatarPopoverRef.current?.contains(target))
+      ) {
+        return;
+      }
+
+      setIsTopAvatarPopoverOpen(false);
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown, true);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+    };
+  }, [isTopAvatarPopoverOpen]);
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setIsTopAvatarPopoverOpen(false);
+    }
+  }, [isLoggedIn]);
 
   return (
     <header
@@ -1962,12 +2727,13 @@ function TitleBar({
               selected={notificationOpen}
               aria-label="通知"
               aria-expanded={notificationOpen}
-              onPointerDown={(event) => {
-                blurActiveInputControl();
-                event.stopPropagation();
-                event.preventDefault();
-                onNotificationToggle();
-              }}
+	              onPointerDown={(event) => {
+	                blurActiveInputControl();
+	                event.stopPropagation();
+	                event.preventDefault();
+	                setIsTopAvatarPopoverOpen(false);
+	                onNotificationToggle();
+	              }}
               onClick={(event) => {
                 event.stopPropagation();
                 event.preventDefault();
@@ -2011,13 +2777,65 @@ function TitleBar({
           ].join(' ')}
         >
           {isLoggedIn ? (
-            <div className="h-8 w-8 overflow-hidden rounded-pill shadow-avatar-border">
-              <img
-                className="h-full w-full rounded-pill object-cover"
-                src={profileAvatarSrc}
-                alt=""
-              />
-            </div>
+            <>
+              <button
+                ref={topAvatarButtonRef}
+                className={[
+                  'h-8 w-8 overflow-hidden rounded-pill shadow-avatar-border hover:shadow-[0_0_0_1px_rgb(0_0_0_/_0.08)]',
+                  isTopAvatarPopoverOpen
+                    ? '!shadow-[0_0_0_1px_rgb(0_0_0_/_0.16)]'
+                    : '',
+                ].join(' ')}
+                type="button"
+                aria-label="账户菜单"
+                aria-expanded={isTopAvatarPopoverOpen}
+	                onPointerDown={(event) => {
+	                  blurActiveInputControl();
+	                  event.stopPropagation();
+	                  event.preventDefault();
+	                  onNotificationClose();
+	                  setIsTopAvatarPopoverOpen((currentValue) => !currentValue);
+	                }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  event.preventDefault();
+                }}
+              >
+                <AccountAvatar account={currentAccount} avatarSrc={profileAvatarSrc} />
+              </button>
+              {isTopAvatarPopoverOpen && (
+                <TopAvatarPopover
+                  popoverRef={topAvatarPopoverRef}
+                  anchorRef={topAvatarButtonRef}
+                  avatarSrc={profileAvatarSrc}
+                  nickname={profileNickname}
+                  phone={profilePhone}
+                  currentAccount={currentAccount}
+                  accounts={accountsToShow}
+                  selectedAccountId={selectedAccountId}
+                  onAccountSelect={(accountId) => {
+                    onAccountSelect(accountId);
+                    setIsTopAvatarPopoverOpen(false);
+                  }}
+                  onLoginMoreAccountsClick={() => {
+                    setIsTopAvatarPopoverOpen(false);
+                    onSwitchAccountClick();
+                  }}
+                  onProfileClick={() => {
+                    setIsTopAvatarPopoverOpen(false);
+                    onProfileClick();
+                  }}
+                  onSupportClick={() => {
+                    setIsTopAvatarPopoverOpen(false);
+                    onSupportClick();
+                  }}
+                  onLogoutClick={() => {
+                    setIsTopAvatarPopoverOpen(false);
+                    onLogoutClick();
+                  }}
+                />
+              )}
+            </>
           ) : (
             <Button
               className="h-8 whitespace-nowrap px-4"
@@ -2219,6 +3037,7 @@ function InvoiceModal({
 }
 
 function ProfileModal({
+  account,
   avatarSrc,
   nickname,
   presetAvatarSrcs,
@@ -2227,6 +3046,7 @@ function ProfileModal({
   onNicknameChange,
   onClose,
 }: {
+  account: MockAccount | null;
   avatarSrc: string;
   nickname: string;
   presetAvatarSrcs: readonly string[];
@@ -2241,6 +3061,7 @@ function ProfileModal({
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
   const closeTimerRef = useRef<number | null>(null);
   const overlayPointerStartedRef = useRef(false);
+  const isEnterpriseProfile = account?.type === 'enterprise';
   const canSaveProfile = draftNickname.trim().length > 0;
 
   const handleAvatarFileChange = useCallback(
@@ -2352,87 +3173,100 @@ function ProfileModal({
               id="profile-modal-title"
               className="min-w-0 flex-1 text-base font-medium leading-6 text-text-primary"
             >
-              个人资料
+              {isEnterpriseProfile ? '企业资料' : '个人资料'}
             </h2>
           </div>
           <ModalCloseButton aria-label="关闭个人资料弹窗" onClick={requestClose} />
         </div>
 
         <div className="flex w-full flex-col items-start justify-center gap-4 px-6 py-4">
-          <div className="flex w-full flex-col items-center gap-2">
-            <button
-              className="group relative h-24 w-24 shrink-0 rounded-pill outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-selected"
-              type="button"
-              aria-label="修改头像"
-              onClick={() => avatarInputRef.current?.click()}
-            >
-              <div className="absolute inset-0 overflow-hidden rounded-pill shadow-avatar-border">
-                <img
-                  className="h-full w-full rounded-pill object-cover"
-                  src={avatarSrc}
-                  alt=""
-                />
+          {isEnterpriseProfile ? (
+            <div className="flex w-full flex-col items-center gap-2">
+              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-pill bg-bg-black text-2xl font-medium leading-8 text-text-inverse shadow-avatar-border">
+                {getAccountInitial(draftNickname)}
               </div>
-              <span className="absolute inset-0 rounded-pill bg-bg-black/0 transition-colors group-hover:bg-bg-black/40 group-active:bg-bg-black/60" />
-              <span className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-pill bg-bg-white shadow-border-strong hover:bg-bg-soft active:bg-bg-medium">
-                <Icon name="ImagePlus" size="2xs" strokeWidth={1} />
-              </span>
-            </button>
-            <input
-              ref={avatarInputRef}
-              className="hidden"
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarFileChange}
-            />
-            <p className="text-center text-xs leading-4 text-text-hint">
-              点击修改头像
-            </p>
-          </div>
-
-          <div
-            className="flex w-full items-center justify-center gap-1 py-2"
-            aria-label="默认头像"
-          >
-            {presetAvatarSrcs.map((presetAvatarSrc) => {
-              const isSelected = avatarSrc === presetAvatarSrc;
-
-              return (
+              <p className="text-center text-xs leading-4 text-text-hint">
+                企业账号标识
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="flex w-full flex-col items-center gap-2">
                 <button
-                  key={presetAvatarSrc}
-                  className={[
-                    'flex shrink-0 items-center justify-center rounded-pill p-1 transition-shadow',
-                    isSelected
-                      ? 'shadow-border-selected'
-                      : 'hover:shadow-border-strong active:shadow-border-selected',
-                  ].join(' ')}
+                  className="group relative h-24 w-24 shrink-0 rounded-pill outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-selected"
                   type="button"
-                  aria-label="选择默认头像"
-                  aria-pressed={isSelected}
-                  onClick={() => onAvatarPresetSelect(presetAvatarSrc)}
+                  aria-label="修改头像"
+                  onClick={() => avatarInputRef.current?.click()}
                 >
-                  <img
-                    className="h-8 w-8 rounded-pill object-cover"
-                    src={presetAvatarSrc}
-                    alt=""
-                  />
+                  <div className="absolute inset-0 overflow-hidden rounded-pill shadow-avatar-border">
+                    <img
+                      className="h-full w-full rounded-pill object-cover"
+                      src={avatarSrc}
+                      alt=""
+                    />
+                  </div>
+                  <span className="absolute inset-0 rounded-pill bg-bg-black/0 transition-colors group-hover:bg-bg-black/40 group-active:bg-bg-black/60" />
+                  <span className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-pill bg-bg-white shadow-border-strong hover:bg-bg-soft active:bg-bg-medium">
+                    <Icon name="ImagePlus" size="2xs" strokeWidth={1} />
+                  </span>
                 </button>
-              );
-            })}
-          </div>
+                <input
+                  ref={avatarInputRef}
+                  className="hidden"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarFileChange}
+                />
+                <p className="text-center text-xs leading-4 text-text-hint">
+                  点击修改头像
+                </p>
+              </div>
+
+              <div
+                className="flex w-full items-center justify-center gap-1 py-2"
+                aria-label="默认头像"
+              >
+                {presetAvatarSrcs.map((presetAvatarSrc) => {
+                  const isSelected = avatarSrc === presetAvatarSrc;
+
+                  return (
+                    <button
+                      key={presetAvatarSrc}
+                      className={[
+                        'flex shrink-0 items-center justify-center rounded-pill p-1 transition-shadow',
+                        isSelected
+                          ? 'shadow-border-selected'
+                          : 'hover:shadow-border-strong active:shadow-border-selected',
+                      ].join(' ')}
+                      type="button"
+                      aria-label="选择默认头像"
+                      aria-pressed={isSelected}
+                      onClick={() => onAvatarPresetSelect(presetAvatarSrc)}
+                    >
+                      <img
+                        className="h-8 w-8 rounded-pill object-cover"
+                        src={presetAvatarSrc}
+                        alt=""
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
           <div className="flex w-full flex-col items-center gap-2">
             <label
               className="w-full text-sm leading-5 text-text-primary"
               htmlFor="profile-nickname"
             >
-              用户昵称
+              {isEnterpriseProfile ? '企业名称' : '用户昵称'}
             </label>
             <CounterInput
               id="profile-nickname"
               className="w-full"
               value={draftNickname}
-              placeholder="起个好听的昵称吧！"
+              placeholder={isEnterpriseProfile ? '请输入企业名称' : '起个好听的昵称吧！'}
               maxLength={15}
               error={nicknameHasError}
               onValueChange={(nextNickname) => {
@@ -2450,7 +3284,9 @@ function ProfileModal({
             >
               {nicknameHasError
                 ? '昵称不可为空！'
-                : '长度1-15个字符，支持中文、英文、数字、“_”'}
+                : isEnterpriseProfile
+                  ? '长度1-15个字符，支持中文、英文、数字、“_”'
+                  : '长度1-15个字符，支持中文、英文、数字、“_”'}
             </p>
           </div>
         </div>
@@ -5958,6 +6794,8 @@ export function HomePage() {
     getCurrentMockUser(),
   );
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isLoginAccountSelectionModalOpen, setIsLoginAccountSelectionModalOpen] =
+    useState(false);
   const [profileAvatarSrc, setProfileAvatarSrc] = useState(
     () => getCurrentMockUser()?.avatarSrc ?? '/assets/home/Avatar.png',
   );
@@ -5997,11 +6835,6 @@ export function HomePage() {
   const handleProfileAvatarPresetSelect = useCallback((avatarSrc: string) => {
     setProfileAvatarSrc(avatarSrc);
     updateMockUserProfile({ avatarSrc });
-  }, []);
-
-  const handleProfileNicknameChange = useCallback((nickname: string) => {
-    setProfileNickname(nickname);
-    updateMockUserProfile({ nickname });
   }, []);
 
   const handleCloseProfileModal = useCallback(() => {
@@ -6054,6 +6887,9 @@ export function HomePage() {
   const [accountData, setAccountData] = useState<MockAccountData>(() =>
     getMockAccountData(getCurrentMockUser(), seededAccountData),
   );
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(
+    null,
+  );
   const unreadMessageIds = useMemo(
     () => getUnreadMockMessageIds(messagesByMode),
     [messagesByMode],
@@ -6076,6 +6912,51 @@ export function HomePage() {
   const messageUnreadCount =
     messageUnreadCounts.announcements + messageUnreadCounts.activity;
   const isLoggedIn = currentUser !== null;
+  const currentAccount =
+    selectedAccountId !== null
+      ? accountData.accounts.find((account) => account.id === selectedAccountId) ??
+        accountData.accounts[0] ??
+        null
+      : accountData.accounts[0] ?? null;
+  const resolvedSelectedAccountId = currentAccount?.id ?? null;
+  const currentAccountDisplayName = isLoggedIn
+    ? getAccountDisplayName(currentAccount, profileNickname)
+    : '点击登录';
+  const handleCurrentAccountProfileNameChange = useCallback(
+    (nickname: string) => {
+      if (currentAccount?.type === 'enterprise') {
+        setAccountData(
+          updateMockAccountName(
+            currentUser,
+            seededAccountData,
+            currentAccount.id,
+            nickname,
+          ),
+        );
+        return;
+      }
+
+      setProfileNickname(nickname);
+      updateMockUserProfile({ nickname });
+    },
+    [currentAccount, currentUser],
+  );
+
+  useEffect(() => {
+    if (!isLoggedIn) {
+      if (selectedAccountId !== null) {
+        setSelectedAccountId(null);
+      }
+      return;
+    }
+
+    if (
+      selectedAccountId !== null &&
+      !accountData.accounts.some((account) => account.id === selectedAccountId)
+    ) {
+      setSelectedAccountId(accountData.accounts[0]?.id ?? null);
+    }
+  }, [accountData.accounts, isLoggedIn, selectedAccountId]);
   const visibleMessageUnreadCounts = isLoggedIn
     ? messageUnreadCounts
     : emptyMessageUnreadCounts;
@@ -6134,6 +7015,7 @@ export function HomePage() {
     isSupportModalOpen ||
     isRechargeModalOpen ||
     isLoginModalOpen ||
+    isLoginAccountSelectionModalOpen ||
     isMarkAllReadModalOpen ||
     isLogoutConfirmModalOpen ||
     isProfileModalOpen ||
@@ -6853,7 +7735,9 @@ export function HomePage() {
     setCurrentUser(nextUser);
     setMessagesByMode(getMockMessages(nextUser));
     setProjectItems(getMockProjects(nextUser, projects));
-    setAccountData(getMockAccountData(nextUser, seededAccountData));
+    const nextAccountData = getMockAccountData(nextUser, seededAccountData);
+    setAccountData(nextAccountData);
+    setSelectedAccountId(nextAccountData.accounts[0]?.id ?? null);
     setPendingReadMessageIds(new Set());
 
     if (nextUser !== null) {
@@ -6921,7 +7805,34 @@ export function HomePage() {
   }
 
   function handleMockDebugResetAccount() {
-    setAccountData(resetMockAccountData(currentUser, seededAccountData));
+    const nextAccountData = resetMockAccountData(currentUser, seededAccountData);
+    setAccountData(nextAccountData);
+    setSelectedAccountId(nextAccountData.accounts[0]?.id ?? null);
+  }
+
+  function handleMockDebugAddExtraAccount() {
+    const nextAccountData = addMockExtraAccountData(currentUser, seededAccountData);
+    const nextSelectedAccount =
+      nextAccountData.accounts[nextAccountData.accounts.length - 1] ?? null;
+    setAccountData(nextAccountData);
+    setSelectedAccountId(nextSelectedAccount?.id ?? null);
+  }
+
+  function handleMockDebugResetExtraAccounts() {
+    const nextAccountData = resetMockExtraAccountData(currentUser, seededAccountData);
+    setAccountData(nextAccountData);
+    setSelectedAccountId((currentSelectedAccountId) => {
+      if (
+        currentSelectedAccountId !== null &&
+        nextAccountData.accounts.some(
+          (account) => account.id === currentSelectedAccountId,
+        )
+      ) {
+        return currentSelectedAccountId;
+      }
+
+      return nextAccountData.accounts[0]?.id ?? null;
+    });
   }
 
   function handleMockDebugPushMessage(targetMessageMode: MessageMode) {
@@ -6971,7 +7882,12 @@ export function HomePage() {
         activePage={activePage}
         messageUnreadCount={visibleMessageUnreadCount}
         profileAvatarSrc={profileAvatarSrc}
-        profileLabel={isLoggedIn ? profileNickname : '点击登录'}
+        profileLabel={currentAccountDisplayName}
+        profileNickname={profileNickname}
+        profilePhone={currentUser?.phone ?? ''}
+        currentAccount={currentAccount}
+        accounts={accountData.accounts}
+        selectedAccountId={resolvedSelectedAccountId}
         isLoggedIn={isLoggedIn}
         onToggle={() => {
           setShowCollapsedToggle(false);
@@ -6979,6 +7895,7 @@ export function HomePage() {
         }}
         onPageChange={handlePageChange}
         onLoginClick={() => setIsLoginModalOpen(true)}
+        onAccountSelect={setSelectedAccountId}
         onProfileClick={handleOpenProfileModal}
         onPolicyClick={() => handleOpenPolicyModal('privacy')}
         onSupportClick={() => setIsSupportModalOpen(true)}
@@ -7018,8 +7935,18 @@ export function HomePage() {
           showDivider={isTitleMenuVisible || isProjectDetailPage}
           sidebarCollapsed={isSidebarCollapsed}
           isLoggedIn={isLoggedIn}
+          accountsToShow={accountData.accounts}
+          currentAccount={currentAccount}
+          selectedAccountId={resolvedSelectedAccountId}
           profileAvatarSrc={profileAvatarSrc}
+          profileNickname={profileNickname}
+          profilePhone={currentUser?.phone ?? ''}
           onLoginClick={() => setIsLoginModalOpen(true)}
+          onSwitchAccountClick={() => setIsLoginModalOpen(true)}
+          onAccountSelect={setSelectedAccountId}
+          onProfileClick={handleOpenProfileModal}
+          onSupportClick={() => setIsSupportModalOpen(true)}
+          onLogoutClick={() => setIsLogoutConfirmModalOpen(true)}
           projectDetailTitle={isProjectDetailPage ? currentProjectDetail.title : null}
           onProjectDetailBack={handleProjectDetailBack}
           projectDetailMenuOpen={isProjectDetailPage && isProjectDetailMenuOpen}
@@ -7168,11 +8095,35 @@ export function HomePage() {
           onClose={() => setIsLoginModalOpen(false)}
           onLogin={(phone) => {
             const nextCurrentUser = loginMockUser(phone);
+            const nextAccountData = getMockAccountData(
+              nextCurrentUser,
+              seededAccountData,
+            );
 
             applyMockUser(nextCurrentUser);
+            if (
+              nextCurrentUser.dataMode !== 'empty-data' &&
+              nextAccountData.accounts.length > 1
+            ) {
+              window.setTimeout(() => {
+                setIsLoginAccountSelectionModalOpen(true);
+              }, 220);
+            }
           }}
           onPrivacyClick={() => handleOpenPolicyModal('privacy')}
           onTermsClick={() => handleOpenPolicyModal('agreement')}
+        />
+      )}
+      {isLoginAccountSelectionModalOpen && (
+        <LoginAccountSelectionModal
+          accounts={accountData.accounts}
+          avatarSrc={profileAvatarSrc}
+          nickname={profileNickname}
+          phone={currentUser?.phone ?? ''}
+          selectedAccountId={resolvedSelectedAccountId}
+          onAccountSelect={setSelectedAccountId}
+          onClose={() => setIsLoginAccountSelectionModalOpen(false)}
+          onConfirm={() => setIsLoginAccountSelectionModalOpen(false)}
         />
       )}
       {isMarkAllReadModalOpen && (
@@ -7196,25 +8147,35 @@ export function HomePage() {
       {import.meta.env.DEV && isMockDebugPanelOpen && (
         <MockDebugPanel
           currentUser={currentUser}
+          accounts={accountData.accounts}
+          selectedAccountId={resolvedSelectedAccountId}
           onClose={() => setIsMockDebugPanelOpen(false)}
           onLoginWithData={() => handleMockDebugLogin('18888888888')}
           onLoginEmptyData={() => handleMockDebugLogin('16666666666')}
           onLogout={handleMockDebugLogout}
+          onSelectAccount={setSelectedAccountId}
           onResetMessages={handleMockDebugResetMessages}
           onResetProjects={handleMockDebugResetProjects}
           onResetAccount={handleMockDebugResetAccount}
+          onAddExtraAccount={handleMockDebugAddExtraAccount}
+          onResetExtraAccounts={handleMockDebugResetExtraAccounts}
           onPushAnnouncement={() => handleMockDebugPushMessage('announcements')}
           onPushActivity={() => handleMockDebugPushMessage('activity')}
         />
       )}
       {isProfileModalOpen && (
         <ProfileModal
+          account={currentAccount}
           avatarSrc={profileAvatarSrc}
-          nickname={profileNickname}
+          nickname={
+            currentAccount?.type === 'enterprise'
+              ? currentAccount.name
+              : profileNickname
+          }
           presetAvatarSrcs={profilePresetAvatarSrcs}
           onAvatarChange={handleProfileAvatarChange}
           onAvatarPresetSelect={handleProfileAvatarPresetSelect}
-          onNicknameChange={handleProfileNicknameChange}
+          onNicknameChange={handleCurrentAccountProfileNameChange}
           onClose={handleCloseProfileModal}
         />
       )}

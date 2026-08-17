@@ -22,28 +22,30 @@
 
 ### 2.2 字号与行高
 
-| Font Size | Line Height | Usage |
-| --- | --- | --- |
-| `10px` | `13px` | 极小状态标签，仅用于空间受限的状态徽标 |
-| `12px` | `16px` | 辅助信息、标签、状态、表格次要字段 |
-| `14px` | `20px` | 默认正文、按钮、表单、列表内容 |
-| `16px` | `24px` | 重要正文、卡片标题、表单分组标题 |
-| `18px` | `26px` | 页面小标题、模块标题 |
-| `20px` | `28px` | 页面标题、重点模块标题 |
-| `24px` | `32px` | 强标题、运营位标题 |
-| `28px` | `36px` | 首屏标题、市场页重点标题 |
-| `32px` | `40px` | 大标题 |
-| `36px` | `44px` | 强视觉标题 |
-| `40px` | `48px` | 首页主标题 |
-| `48px` | `56px` | 大型展示标题 |
-| `56px` | `64px` | 特殊营销标题 |
-| `64px` | `72px` | 特殊超大标题 |
-| `72px` | `80px` | 极少使用的品牌展示标题 |
+| Token | Font Size | Line Height | Usage |
+| --- | --- | --- | --- |
+| `text-xxs` | `10px` | `13px` | 极小状态标签，仅用于空间受限的状态徽标 |
+| `text-label` | `11px` | `14px` | 极小 badge、角标、紧凑数字标签 |
+| `text-xs` | `12px` | `16px` | 辅助信息、标签、状态、表格次要字段 |
+| `text-sm` | `14px` | `20px` | 默认正文、按钮、表单、列表内容 |
+| `text-base` | `16px` | `24px` | 重要正文、卡片标题、表单分组标题 |
+| `text-lg` | `18px` | `26px` | 页面小标题、模块标题 |
+| `text-xl` | `20px` | `28px` | 页面标题、重点模块标题 |
+| `text-2xl` | `24px` | `32px` | 强标题、运营位标题 |
+| `text-3xl` | `28px` | `36px` | 首屏标题、市场页重点标题 |
+| `text-4xl` | `32px` | `40px` | 大标题 |
+| `text-5xl` | `36px` | `44px` | 强视觉标题 |
+| `text-6xl` | `40px` | `48px` | 首页主标题 |
+| `text-7xl` | `48px` | `56px` | 大型展示标题 |
+| `text-8xl` | `56px` | `64px` | 特殊营销标题 |
+| `text-9xl` | `64px` | `72px` | 特殊超大标题 |
+| `text-10xl` | `72px` | `80px` | 极少使用的品牌展示标题 |
 
 ### 2.3 执行规则
 
 - 页面正文优先使用 `14px / 20px`。
 - `10px / 13px` 仅用于设计稿明确标注的极小状态标签，不作为正文、说明文字或按钮字号。
+- `11px / 14px` 仅用于极小 badge、角标、紧凑数字标签，不作为正文、说明文字或按钮字号。
 - 除品牌 Logo 文字外，字体族统一使用系统默认字体；字号、行高、字重按本文档规范执行。
 - 表格、标签、说明信息优先使用 `12px / 16px`。
 - 标题按层级递增，不为了装饰随意放大。
@@ -187,21 +189,21 @@
 | `button.text.white.active` | 文字按钮 | 白底点击 / 选中 | `#F3F3F3` | `#000000` | none |
 | `button.text.soft.hover` | 文字按钮 | 灰底悬停 | `#F3F3F3` | `#000000` | none |
 | `button.text.soft.active` | 文字按钮 | 灰底点击 / 选中 | `#EAEAEA` | `#000000` | none |
-| `button.link.black.default` | 链接按钮 | 默认 | transparent | `#000000` | none |
-| `button.link.black.hover` | 链接按钮 | 悬停 | transparent | `#666666` | none |
-| `button.link.black.active` | 链接按钮 | 点击 | transparent | `#000000` | none |
-| `button.link.red.default` | 链接按钮 | 默认 | transparent | `#D94E41` | none |
-| `button.link.red.hover` | 链接按钮 | 悬停 | transparent | `#FF796D` | none |
-| `button.link.red.active` | 链接按钮 | 点击 | transparent | `#91342C` | none |
-| `button.link.yellow.default` | 链接按钮 | 默认 | transparent | `#D97C25` | none |
-| `button.link.yellow.hover` | 链接按钮 | 悬停 | transparent | `#FFA651` | none |
-| `button.link.yellow.active` | 链接按钮 | 点击 | transparent | `#915319` | none |
-| `button.link.green.default` | 链接按钮 | 默认 | transparent | `#219B5A` | none |
-| `button.link.green.hover` | 链接按钮 | 悬停 | transparent | `#4EC385` | none |
-| `button.link.green.active` | 链接按钮 | 点击 | transparent | `#16683C` | none |
-| `button.link.blue.default` | 链接按钮 | 默认 | transparent | `#0074D9` | none |
-| `button.link.blue.hover` | 链接按钮 | 悬停 | transparent | `#2E9DFF` | none |
-| `button.link.blue.active` | 链接按钮 | 点击 | transparent | `#004E91` | none |
+| `textLink.black.default` | 文字链接 | 默认 | transparent | `#000000` | none |
+| `textLink.black.hover` | 文字链接 | 悬停 | transparent | `#666666` | none |
+| `textLink.black.active` | 文字链接 | 点击 | transparent | `#000000` | none |
+| `textLink.red.default` | 文字链接 | 默认 | transparent | `#D94E41` | none |
+| `textLink.red.hover` | 文字链接 | 悬停 | transparent | `#FF796D` | none |
+| `textLink.red.active` | 文字链接 | 点击 | transparent | `#91342C` | none |
+| `textLink.yellow.default` | 文字链接 | 默认 | transparent | `#D97C25` | none |
+| `textLink.yellow.hover` | 文字链接 | 悬停 | transparent | `#FFA651` | none |
+| `textLink.yellow.active` | 文字链接 | 点击 | transparent | `#915319` | none |
+| `textLink.green.default` | 文字链接 | 默认 | transparent | `#219B5A` | none |
+| `textLink.green.hover` | 文字链接 | 悬停 | transparent | `#4EC385` | none |
+| `textLink.green.active` | 文字链接 | 点击 | transparent | `#16683C` | none |
+| `textLink.blue.default` | 文字链接 | 默认 | transparent | `#0074D9` | none |
+| `textLink.blue.hover` | 文字链接 | 悬停 | transparent | `#2E9DFF` | none |
+| `textLink.blue.active` | 文字链接 | 点击 | transparent | `#004E91` | none |
 | `button.disabled` | 通用禁用态 | 禁用 | transparent | `#CCCCCC` | `1px solid #E5E5E5` |
 
 ### 5.3 按钮圆角
@@ -238,7 +240,7 @@
 - 主按钮使用 `primary`，不要用彩色渐变代替。
 - 次级操作使用 `secondary` 或 `text`。
 - 线框按钮和文字按钮叠加在白色背景时使用 `surface="white"`；叠加在灰色背景时使用 `surface="soft"`。
-- 链接按钮使用 `ButtonLink`，不使用填充和描边，只通过 `tone="black" | "red" | "yellow" | "green" | "blue"` 控制文字颜色。
+- 文字链接使用 `TextLink`，不使用填充和描边，只通过 `tone="black" | "red" | "yellow" | "green" | "blue"` 控制文字颜色。
 - 提示类操作使用 `notice`，例如充值、付费确认、额度提醒等带橙色引导的操作。
 - 危险操作才使用 `warning`。
 - 默认按钮尺寸使用 `lg`，即 `36px` 高。
@@ -456,6 +458,8 @@ Modal 用于需要阻断当前页面操作、要求用户完成阅读、确认�
 
 移动端或窄屏时，弹窗宽度使用 `min(tokenWidth, calc(100vw - 48px))`。
 
+弹窗最大高度统一使用 `calc(100vh - 160px)`，即距离窗口顶部和底部最小保留 `80px`。内容超出时只滚动 Body 内容区，Header、Footer、关闭按钮和底部操作区必须保持可见。
+
 ### 8.3 通用结构
 
 | Area | Rule |
@@ -465,7 +469,7 @@ Modal 用于需要阻断当前页面操作、要求用户完成阅读、确认�
 | Header | 标题 + 右侧关闭按钮，标准内边距 `pl-6 pr-4 pt-4 pb-2` |
 | Title | `16px / 24px`，`font-medium` |
 | Close Button | `ModalCloseButton`，`32px × 32px`，使用 `Icon name="X"` |
-| Body | 默认 `px-6 py-4`，复杂业务可关闭默认内边距 |
+| Body | 默认 `px-6 py-4`，内容超高时内部滚动；复杂业务可关闭默认内边距 |
 | Footer | 默认 `px-6 pt-4 pb-6`，右对齐 |
 | Footer Button | 默认使用 `Button size="lg"` |
 

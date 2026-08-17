@@ -28,6 +28,7 @@ type PopoverProps = HTMLAttributes<HTMLDivElement> & {
   anchorRef?: RefObject<HTMLElement | null>;
   boundaryPadding?: number;
   constrainHeight?: boolean;
+  repositionOnChildrenChange?: boolean;
   shadow?: PopoverShadow;
   padding?: PopoverPadding;
   children: ReactNode;
@@ -136,6 +137,7 @@ export const Popover = forwardRef<HTMLDivElement, PopoverProps>(function Popover
     anchorRef,
     boundaryPadding = 48,
     constrainHeight = true,
+    repositionOnChildrenChange = true,
     shadow = 'default',
     padding = 'default',
     className,
@@ -150,6 +152,7 @@ export const Popover = forwardRef<HTMLDivElement, PopoverProps>(function Popover
   const [anchoredStyle, setAnchoredStyle] = useState<CSSProperties | undefined>();
   const usesAnchor = Boolean(anchorRef);
   const resolvedPosition = usesAnchor ? 'fixed' : position;
+  const childrenPositionDependency = repositionOnChildrenChange ? children : undefined;
   const widthStyle = popoverWidthStyle(width);
   const offsetStyle =
     position === 'absolute' && !usesAnchor && offset !== null
@@ -275,7 +278,7 @@ export const Popover = forwardRef<HTMLDivElement, PopoverProps>(function Popover
     align,
     anchorRef,
     boundaryPadding,
-    children,
+    childrenPositionDependency,
     constrainHeight,
     offset,
     placement,

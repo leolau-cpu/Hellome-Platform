@@ -1,6 +1,8 @@
 import type { FormEvent, ReactNode, RefObject } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '../components/ui/Button';
+import type { IconName } from '../components/ui/Icon';
+import { Icon } from '../components/ui/Icon';
 import { InputField } from '../components/ui/Input';
 import { FeatureModal } from '../components/ui/Modal';
 
@@ -19,7 +21,7 @@ type LoginModalProps = LoginPageProps & {
 
 function LoginInput({
   id,
-  iconSrc,
+  icon,
   value,
   placeholder,
   inputMode,
@@ -34,7 +36,7 @@ function LoginInput({
   onChange,
 }: {
   id: string;
-  iconSrc: string;
+  icon: IconName;
   value: string;
   placeholder: string;
   inputMode: 'tel' | 'numeric';
@@ -59,7 +61,7 @@ function LoginInput({
       maxLength={maxLength}
       disabled={disabled}
       readOnly={readOnly}
-      prefixAsset={iconSrc}
+      prefixIcon={icon}
       clearable={clearable}
       clearLabel="清空手机号"
       suffix={action}
@@ -145,11 +147,7 @@ function LoginCard({ onLogin, onPrivacyClick, onTermsClick }: LoginPageProps) {
 
     return (
       <div className="flex h-4 w-full items-center gap-1" aria-live="polite">
-        <img
-          className="h-3 w-3 shrink-0"
-          src="/assets/login/circle-alert.svg"
-          alt=""
-        />
+        <Icon name="CircleAlert" size="2xs" className="shrink-0 text-accent-error" />
         <p className="min-w-0 flex-1 truncate text-xs leading-4 text-accent-error">
           {errorText}
         </p>
@@ -190,7 +188,7 @@ function LoginCard({ onLogin, onPrivacyClick, onTermsClick }: LoginPageProps) {
               <div className="flex w-full flex-col items-start gap-3">
                 <LoginInput
                   id="login-phone"
-                  iconSrc="/assets/login/smartphone.svg"
+                  icon="Smartphone"
                   value={phone}
                   placeholder="输入手机号"
                   inputMode="tel"
@@ -210,7 +208,7 @@ function LoginCard({ onLogin, onPrivacyClick, onTermsClick }: LoginPageProps) {
                 {renderErrorTip(phoneErrorText)}
                 <LoginInput
                   id="login-code"
-                  iconSrc="/assets/login/shield-check.svg"
+                  icon="ShieldCheck"
                   value={verificationCode}
                   placeholder="输入验证码"
                   inputMode="numeric"
