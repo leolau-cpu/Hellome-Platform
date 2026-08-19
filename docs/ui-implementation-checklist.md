@@ -6,6 +6,7 @@
 
 - 正文优先使用 `text-sm`，辅助信息优先使用 `text-xs`。
 - 极小状态标签在设计稿明确标注时使用 `text-xxs`，不要用任意字号。
+- 品牌展示小标题在设计稿明确标注时使用 `text-brand-sm`，不要替代常规页面标题。
 - 除品牌 Logo 文字外，字体族使用系统默认字体；Logo 文字使用 `Zen Dots Regular`。
 - 文本颜色使用 `text-text-primary`、`text-text-secondary`、`text-text-hint` 等 token。
 - 背景颜色使用 `bg-bg-white`、`bg-bg-soft`、`bg-bg-medium`、`bg-bg-strong` 等 token。
@@ -32,6 +33,7 @@
 - 带触发器的普通浮窗必须传入 `anchorRef` 使用自适应定位；最大高度按当前窗口上下 `48px` 安全间距限制，左右不设窗口安全间距，始终与触发器边缘对齐。日期选择只复用定位，不复用高度限制；通知浮窗不归入普通类型，但也必须基于通知触发器对齐。
 - 浮窗与触发器默认间距为 `4px`；触发器优先使用 `onPointerDown` 打开，不等到鼠标释放；外部点击关闭不得阻断被点击目标的原有功能响应。
 - 浮窗打开后页面滚动时必须跟随触发件移动，不得为了上下 `48px` 安全区吸附停留在窗口内；搜索型浮窗无结果高度使用上一次非空内容高度。
+- Tooltip 提示气泡必须使用已封装的 `Tooltip` 控件；气泡最大宽度 `320px`、最大高度 `172px` 不含箭头，触发件间距 `2px`，上下安全间距 `48px`，左右防出屏间距 `8px`。
 - 模态弹窗优先使用已封装控件：`InfoModal`、`ConfirmModal`、`FormModal`、`FeatureModal`、`ContentModal`、`WorkflowModal`；复杂业务弹窗可作为对应模式下的业务实例，但底层必须复用 `Modal`。
 - 新增模态弹窗时先判断尺寸档，再判断模式：`360 InfoModal`、`480 ConfirmModal / FormModal`、`640 FeatureModal`、`720 ContentModal`、`960 WorkflowModal`。
 - 模态弹窗最大高度统一按窗口上下各 `80px` 安全间距限制；内容超出时只滚动 Body，Header/Footer 不参与滚动。

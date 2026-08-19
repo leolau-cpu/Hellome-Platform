@@ -5,6 +5,10 @@ import {
 } from './mock/mockStorage';
 
 export type MockUserDataMode = 'with-data' | 'empty-data';
+export type MockAiWorkstationConnectionStatus =
+  | 'not-installed'
+  | 'not-connected'
+  | 'connected';
 
 export type MockUser = {
   id: string;
@@ -13,6 +17,7 @@ export type MockUser = {
   avatarSrc: string;
   nickname: string;
   dataMode: MockUserDataMode;
+  aiWorkstationConnectionStatus: MockAiWorkstationConnectionStatus;
 };
 
 export type MockUserProfile = Pick<MockUser, 'avatarSrc' | 'nickname'>;
@@ -22,6 +27,7 @@ export const defaultProfileNickname = '哈啰蜜moleaa';
 
 const legacyLoginSessionStorageKey = 'hellome.loginSession';
 const currentMockUserIdStorageKey = 'currentUserId';
+const deprecatedMockUserPhones = ['13666666666', '13888888888'];
 
 export const defaultAvatarSrcs = [
   '/assets/avatars/avatar-female-1.png',
@@ -50,8 +56,75 @@ function getMockUserDataMode(phone: string): MockUserDataMode {
   return 'with-data';
 }
 
+function getMockUserAiWorkstationConnectionStatus(
+  phone: string,
+): MockAiWorkstationConnectionStatus {
+  if (phone === '18888888888') return 'not-connected';
+
+  return 'not-connected';
+}
+
+function normalizeMockAiWorkstationConnectionStatus(
+  phone: string,
+  parsedValue: Partial<MockUser>,
+): MockAiWorkstationConnectionStatus {
+  if (
+    parsedValue.aiWorkstationConnectionStatus === 'not-installed' ||
+    parsedValue.aiWorkstationConnectionStatus === 'not-connected' ||
+    parsedValue.aiWorkstationConnectionStatus === 'connected'
+  ) {
+    return parsedValue.aiWorkstationConnectionStatus;
+  }
+
+  return getMockUserAiWorkstationConnectionStatus(phone);
+}
+
 function getMockUserStorageKey(userId: string) {
   return `users.${userId}.profile`;
+}
+
+function removeDeprecatedMockUsers() {
+  deprecatedMockUserPhones.forEach((phone) => {
+    removeMockStorageValue(getMockUserStorageKey(getMockUserId(phone)));
+  });
+}
+
+function normalizeMockUser(parsedValue: Partial<MockUser>): MockUser | null {
+  if (
+    typeof parsedValue.phone !== 'string' ||
+    parsedValue.phone.length === 0 ||
+    typeof parsedValue.loginAt !== 'number'
+  ) {
+    return null;
+  }
+
+  return {
+    id:
+      typeof parsedValue.id === 'string' && parsedValue.id.length > 0
+        ? parsedValue.id
+        : getMockUserId(parsedValue.phone),
+    phone: parsedValue.phone,
+    loginAt: parsedValue.loginAt,
+    avatarSrc:
+      typeof parsedValue.avatarSrc === 'string' &&
+      parsedValue.avatarSrc.length > 0
+        ? parsedValue.avatarSrc
+        : getRandomDefaultAvatarSrc(),
+    nickname:
+      typeof parsedValue.nickname === 'string' &&
+      parsedValue.nickname.trim().length > 0
+        ? parsedValue.nickname
+        : defaultProfileNickname,
+    dataMode:
+      parsedValue.dataMode === 'empty-data' ||
+      parsedValue.dataMode === 'with-data'
+        ? parsedValue.dataMode
+        : getMockUserDataMode(parsedValue.phone),
+    aiWorkstationConnectionStatus: normalizeMockAiWorkstationConnectionStatus(
+      parsedValue.phone,
+      parsedValue,
+    ),
+  };
 }
 
 function parseMockUser(value: string | null): MockUser | null {
@@ -60,40 +133,10 @@ function parseMockUser(value: string | null): MockUser | null {
   try {
     const parsedValue = JSON.parse(value) as Partial<MockUser>;
 
-    if (
-      typeof parsedValue.phone === 'string' &&
-      parsedValue.phone.length > 0 &&
-      typeof parsedValue.loginAt === 'number'
-    ) {
-      return {
-        id:
-          typeof parsedValue.id === 'string' && parsedValue.id.length > 0
-            ? parsedValue.id
-            : getMockUserId(parsedValue.phone),
-        phone: parsedValue.phone,
-        loginAt: parsedValue.loginAt,
-        avatarSrc:
-          typeof parsedValue.avatarSrc === 'string' &&
-          parsedValue.avatarSrc.length > 0
-            ? parsedValue.avatarSrc
-            : getRandomDefaultAvatarSrc(),
-        nickname:
-          typeof parsedValue.nickname === 'string' &&
-          parsedValue.nickname.trim().length > 0
-            ? parsedValue.nickname
-            : defaultProfileNickname,
-        dataMode:
-          parsedValue.dataMode === 'empty-data' ||
-          parsedValue.dataMode === 'with-data'
-            ? parsedValue.dataMode
-            : getMockUserDataMode(parsedValue.phone),
-      };
-    }
+    return normalizeMockUser(parsedValue);
   } catch {
     return null;
   }
-
-  return null;
 }
 
 function dispatchMockUserChangedEvent() {
@@ -109,10 +152,14 @@ function saveMockUser(user: MockUser) {
 }
 
 function getMockUserById(userId: string) {
-  return readMockStorageValue<MockUser | null>(
+  const storedUser = readMockStorageValue<Partial<MockUser> | null>(
     getMockUserStorageKey(userId),
     null,
   );
+
+  if (storedUser === null) return null;
+
+  return normalizeMockUser(storedUser);
 }
 
 function getLegacyMockUser() {
@@ -124,10 +171,21 @@ function getLegacyMockUser() {
 export function getCurrentMockUser() {
   if (typeof window === 'undefined') return null;
 
+  removeDeprecatedMockUsers();
+
   const currentUserId = readMockStorageValue<string | null>(
     currentMockUserIdStorageKey,
     null,
   );
+
+  if (
+    currentUserId !== null &&
+    deprecatedMockUserPhones.some((phone) => currentUserId === getMockUserId(phone))
+  ) {
+    removeMockStorageValue(currentMockUserIdStorageKey);
+
+    return null;
+  }
 
   if (currentUserId !== null) {
     return getMockUserById(currentUserId);
@@ -161,6 +219,38 @@ export function loginMockUser(phone: string): MockUser {
     avatarSrc: getRandomDefaultAvatarSrc(),
     nickname: defaultProfileNickname,
     dataMode: getMockUserDataMode(phone),
+    aiWorkstationConnectionStatus:
+      getMockUserAiWorkstationConnectionStatus(phone),
+  });
+}
+
+export function updateMockAiWorkstationConnectionStatus(
+  status: MockAiWorkstationConnectionStatus,
+) {
+  if (typeof window === 'undefined') return null;
+
+  const currentUser = getCurrentMockUser();
+
+  if (currentUser === null) return null;
+
+  return saveMockUser({
+    ...currentUser,
+    aiWorkstationConnectionStatus: status,
+  });
+}
+
+export function resetMockAiWorkstationConnectionStatus() {
+  if (typeof window === 'undefined') return null;
+
+  const currentUser = getCurrentMockUser();
+
+  if (currentUser === null) return null;
+
+  return saveMockUser({
+    ...currentUser,
+    aiWorkstationConnectionStatus: getMockUserAiWorkstationConnectionStatus(
+      currentUser.phone,
+    ),
   });
 }
 

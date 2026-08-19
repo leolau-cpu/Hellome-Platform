@@ -6,7 +6,10 @@ import {
   loginMockUser,
   logoutMockUser,
   mockUserChangedEventName,
+  resetMockAiWorkstationConnectionStatus,
+  updateMockAiWorkstationConnectionStatus,
   updateMockUserProfile,
+  type MockAiWorkstationConnectionStatus,
   type MockUser,
 } from '../api/mockUserApi';
 import {
@@ -74,6 +77,7 @@ import {
 } from '../components/ui/Popover';
 import { SearchInput } from '../components/ui/SearchInput';
 import { TabBar } from '../components/ui/TabBar';
+import { Tooltip } from '../components/ui/Tooltip';
 import { LoginModal } from './LoginPage';
 
 const navGroups = [
@@ -140,6 +144,24 @@ const projectFileTypeFilterOptions = [
   '其他',
 ] as const;
 const billingTabs = ['日账单', '产品账单', '请求明细'];
+const billingTabTooltips: Record<string, string> = {
+  日账单: '按自然日汇总的消费、原价与折扣',
+  产品账单: '按模型/产品类型汇总的消费金额',
+  请求明细: '每次API请求的用量与扣费明细',
+};
+const aiWorkstationConnectionStatusLabels: Record<
+  MockAiWorkstationConnectionStatus,
+  string
+> = {
+  'not-installed': '未安装',
+  'not-connected': '未连接',
+  connected: '已连接',
+};
+const aiWorkstationConnectionStatusOptions = [
+  'not-installed',
+  'not-connected',
+  'connected',
+] as const satisfies readonly MockAiWorkstationConnectionStatus[];
 const messageTabs = ['全部', '未读', '已读'];
 
 const messageModeTabs = [
@@ -1639,10 +1661,10 @@ function AccountSwitcherPopover({
         '[data-account-switcher-footer]',
       );
       const preferredTop = parentRect.top + topOffset;
-      const availableBelow = Math.max(196, viewportHeight - preferredTop - 48);
+      const availableBelow = Math.max(0, viewportHeight - preferredTop - 48);
       const naturalHeight =
         (scrollArea?.scrollHeight ?? 0) + (footer?.scrollHeight ?? 0) + 16;
-      const nextHeight = Math.min(naturalHeight, Math.max(196, viewportHeight - 96));
+      const nextHeight = Math.min(naturalHeight, Math.max(0, viewportHeight - 96));
 
       if (naturalHeight <= availableBelow) {
         setPanelStyle({
@@ -1677,7 +1699,7 @@ function AccountSwitcherPopover({
       offset={null}
       constrainHeight={false}
       shadow="strong"
-      className={`${className} z-50 flex min-h-[196px] flex-col overflow-hidden`}
+      className={`${className} z-50 flex flex-col overflow-hidden`}
       style={panelStyle}
     >
       <div
@@ -1803,6 +1825,654 @@ function LoginAccountSelectionModal({
         ))}
       </div>
     </Modal>
+  );
+}
+
+const aiWorkstationFeatureCards = [
+  {
+    icon: 'Lock',
+    title: '数据更可控',
+    description: '智能体在本地工作站执行，减少业务数据外传。',
+  },
+  {
+    icon: 'Atom',
+    title: '适合企业场景',
+    description: '企业资料、知识库与流程由您自主管理。',
+  },
+  {
+    icon: 'BadgeCheck',
+    title: '支持私有化能力',
+    description: '可连接本地模型，支持专属部署方案。',
+  },
+] as const;
+
+const aiWorkstationQuestions = [
+  {
+    title: '为什么需要连接本地 AI 工作站?',
+    description:
+      'Hellome负责工作台交互，HzHermes负责在您的电脑上执行智能体任务。连接后，任务数据可以在本地处理，帮助企业降低敏感信息外泄风。',
+  },
+  {
+    title: '连接后数据会上传到云端吗?',
+    description:
+      '重要的任务数据，是在本地处理，不会上传至云端，只有部分账户数据会同步。',
+  },
+  {
+    title: 'HzHermes 可以安装在另一台电脑上使用吗？',
+    description:
+      'HzHermes 可以安装在另一台电脑上使用，只要登录同一个手机号，HelloMe 就可以识别连接状态。',
+  },
+] as const;
+
+const aiWorkstationPairingSteps = [
+  {
+    title: '打开 HzHermes',
+    description: '请先确认 HzHermes 已启动，并保持在后台运行。',
+  },
+  {
+    title: '完成配对',
+    description: '在“消息平台”中找到 Hellome，点击“一键配对 HzHermes”',
+  },
+  {
+    title: '检查登录账号',
+    description: 'Hellome 与 HzHermes 必须使用同一个登录账号。',
+  },
+] as const;
+
+function AiWorkstationConnectionModal({
+  status,
+  currentUser,
+  accountStats,
+  avatarSrc,
+  nickname,
+  onPairComplete,
+  onOverviewClick,
+  onClose,
+}: {
+  status: MockAiWorkstationConnectionStatus;
+  currentUser: MockUser | null;
+  accountStats: MockAccountStat[];
+  avatarSrc: string;
+  nickname: string;
+  onPairComplete: () => void;
+  onOverviewClick: () => void;
+  onClose: () => void;
+}) {
+  const [expandedQuestionIndex, setExpandedQuestionIndex] = useState<
+    number | null
+  >(null);
+
+  return (
+    <Modal
+      size="md"
+      ariaLabel="连接AI工作站"
+      showCloseButton={false}
+      bodyPadding={false}
+      panelClassName="relative h-[640px] !w-[840px] !bg-bg-black p-0 !shadow-ai-workstation-modal"
+      bodyClassName="overflow-y-auto"
+      header={({ close }) => (
+        <div className="absolute right-0 top-0 z-20 flex h-14 w-14 items-start justify-end pb-2 pl-2 pr-4 pt-4">
+          <ModalCloseButton
+            aria-label="关闭连接AI工作站弹窗"
+            surface="soft"
+            onClick={close}
+          />
+        </div>
+      )}
+      onClose={onClose}
+    >
+      <div className="relative flex h-full min-h-0 w-full items-start overflow-hidden">
+        <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
+          <div className="absolute inset-0 flex items-center justify-center [container-type:size]">
+            <div className="h-[100cqw] w-[100cqh] shrink-0 -rotate-90">
+              <img
+                className="h-full w-full object-cover"
+                src="/assets/ai-workstation/connect-cover.png"
+                alt=""
+              />
+              <div className="absolute inset-0 bg-bg-black/20" />
+            </div>
+          </div>
+        </div>
+
+        <section className="relative flex h-full min-w-0 flex-1 flex-col items-start gap-6 px-12 py-10">
+          <div
+            className="relative z-10 h-12 w-[45px] shrink-0"
+            data-name="hermes-logo 4"
+          >
+            <img
+              className="absolute inset-0 block h-full w-full max-w-none"
+              src="/assets/ai-workstation/hermes-logo.svg"
+              alt=""
+            />
+          </div>
+
+          <div
+            className="relative z-10 flex w-full shrink-0 flex-col items-start gap-2"
+            data-name="Heading"
+          >
+            <div
+              className="flex w-full shrink-0 flex-col items-start text-left text-accent-warningSoft"
+              data-name="Title"
+            >
+              <h2 className="w-full shrink-0 text-brand-sm font-extrabold uppercase leading-[30px]">
+                HZ HERMES
+              </h2>
+              <p className="w-full shrink-0 text-xl font-semibold">
+                你的 AI 智能体管家，发号施令，坐等成果
+              </p>
+            </div>
+            <div
+              className="relative flex w-full shrink-0 items-start justify-center overflow-hidden"
+              data-name="Subtitle"
+            >
+              <p className="min-w-0 flex-1 text-justify text-label text-accent-warningSoft">
+                Hellome 是本地化的智能体操作工作台，连接 HzHermes
+                后，由 Hellome 统一组织智能体任务，HzHermes
+                在本地工作站完成执行，你的工作流更顺畅，数据边界也更清晰。
+              </p>
+            </div>
+          </div>
+
+          <div
+            className="relative z-10 flex w-full shrink-0 items-start justify-center gap-1"
+            data-name="Card Container"
+          >
+            {aiWorkstationFeatureCards.map((card) => (
+              <article
+                key={card.title}
+                className="relative flex min-w-0 flex-1 flex-col items-start gap-4 rounded-lg bg-overlay-white8 p-4 text-accent-warningSoft"
+                data-name="Card"
+              >
+                <Icon name={card.icon} size="md" className="shrink-0" />
+                <div
+                  className="relative flex w-full shrink-0 flex-col items-start gap-1.5"
+                  data-name="Text Container"
+                >
+                  <div
+                    className="relative flex w-full shrink-0 items-center justify-center"
+                    data-name="Title"
+                  >
+                    <p className="min-w-0 flex-1 text-left text-label font-normal">
+                      {card.title}
+                    </p>
+                  </div>
+                  <div
+                    className="relative flex w-full shrink-0 items-start overflow-hidden"
+                    data-name="Subtitle"
+                  >
+                    <p className="min-w-0 flex-1 text-justify text-label text-accent-warningSoft/80">
+                      {card.description}
+                    </p>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          <div
+            className="relative z-10 flex w-full shrink-0 flex-col items-center gap-2"
+            data-name="QA"
+          >
+              <div
+                className="relative flex w-full shrink-0 items-center gap-1 text-accent-warningSoft/60"
+                data-name="Title"
+              >
+                <Icon name="MessageCircleQuestion" size="2xs" />
+                <span className="text-label font-medium">
+                  常见问题
+                </span>
+              </div>
+              <div
+                className="relative flex w-full shrink-0 flex-col items-start gap-1"
+                data-name="List"
+              >
+                {aiWorkstationQuestions.map((question, index) => {
+                  const isExpanded = expandedQuestionIndex === index;
+
+                  return (
+                  <button
+                    key={question.title}
+                    className="relative flex w-full shrink-0 flex-col items-start rounded-lg bg-overlay-white8 px-4 text-left text-accent-warningSoft transition-colors hover:bg-overlay-white12"
+                    type="button"
+                    data-name="List Item"
+                    aria-expanded={isExpanded}
+                    onClick={() =>
+                      setExpandedQuestionIndex((currentIndex) =>
+                        currentIndex === index ? null : index,
+                      )
+                    }
+                  >
+                    <span
+                      className="relative flex h-10 w-full shrink-0 items-center justify-center gap-2 py-3"
+                      data-name="Title"
+                    >
+                      <span className="flex min-w-0 flex-1 flex-col justify-center text-left text-label">
+                        {question.title}
+                      </span>
+                      <Icon
+                        name={isExpanded ? 'ChevronDown' : 'ChevronRight'}
+                        size="sm"
+                        className="shrink-0 opacity-60 transition-transform duration-200 ease-out"
+                      />
+                    </span>
+                    <span
+                      className={[
+                        'grid w-full overflow-hidden transition-[grid-template-rows,opacity] duration-200 ease-out',
+                        isExpanded
+                          ? 'grid-rows-[1fr] opacity-100'
+                          : 'grid-rows-[0fr] opacity-0',
+                      ].join(' ')}
+                      data-name="Detail"
+                    >
+                      <span className="min-h-0 overflow-hidden">
+                        <span className="block px-0 pb-3 pt-0 text-justify text-label text-accent-warningSoft/80">
+                          {question.description}
+                        </span>
+                      </span>
+                    </span>
+                  </button>
+                  );
+                })}
+              </div>
+          </div>
+        </section>
+
+        <aside className="relative flex h-full w-[360px] shrink-0 items-center py-2 pr-2">
+          <div
+            className="flex h-full min-w-0 flex-1 flex-col items-center overflow-hidden rounded-lg bg-bg-soft px-8 py-6"
+            data-name="Panel"
+          >
+            {status === 'not-installed' ? (
+              <AiWorkstationUninstalledPanelContent />
+            ) : status === 'not-connected' ? (
+              <AiWorkstationNotConnectedPanelContent
+                onPairComplete={onPairComplete}
+              />
+            ) : (
+              <AiWorkstationConnectedPanelContent
+                currentUser={currentUser}
+                accountStats={accountStats}
+                avatarSrc={avatarSrc}
+                nickname={nickname}
+                onOverviewClick={onOverviewClick}
+              />
+            )}
+            <div
+              className="relative flex h-4 w-full shrink-0 items-center justify-center px-0"
+              data-name="Menu Item"
+            >
+              <div className="h-px w-full bg-border-subtle" />
+            </div>
+            <div
+              className="relative flex w-full shrink-0 flex-col items-center gap-0.5 pt-2 text-center"
+              data-name="Footer"
+            >
+              <p className="flex w-full flex-col justify-center text-label font-extrabold uppercase text-text-placeholder">
+                HZHERMES
+              </p>
+              <p className="w-full text-xxs text-text-placeholder">
+                多种能力，无限可能
+              </p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </Modal>
+  );
+}
+
+function AiWorkstationRightHeader({
+  icon,
+  iconClassName,
+  title,
+  titleLineClassName = 'leading-6',
+}: {
+  icon: 'CircleAlert' | 'CircleCheckBig' | 'CircleX';
+  iconClassName: string;
+  title: string;
+  titleLineClassName?: string;
+}) {
+  return (
+    <div
+      className="relative flex w-full shrink-0 flex-col items-center justify-center gap-3 pb-2 pt-4"
+      data-name="Header"
+    >
+      <Icon name={icon} size="xl" className={iconClassName} />
+      <div
+        className="flex w-full shrink-0 flex-col items-center text-center"
+        data-name="Text Container"
+      >
+        <h2 className="w-full shrink-0 text-base font-semibold leading-6 text-text-primary">
+          {title}
+        </h2>
+        <p
+          className={[
+            'w-full shrink-0 text-base font-extrabold uppercase text-text-primary',
+            titleLineClassName,
+          ].join(' ')}
+        >
+          HZHERMES
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function AiWorkstationRightDivider({ inset }: { inset: 'wide' | 'none' }) {
+  return (
+    <div
+      className={[
+        'relative flex h-4 w-full shrink-0 items-center justify-center',
+        inset === 'wide' ? 'px-16' : 'px-0',
+      ].join(' ')}
+      data-name="Menu Item"
+    >
+      <div
+        className={[
+          'h-px w-full',
+          inset === 'wide' ? 'bg-border-default' : 'bg-border-subtle',
+        ].join(' ')}
+      />
+    </div>
+  );
+}
+
+function AiWorkstationUninstalledPanelContent() {
+  return (
+    <div
+      className="relative flex min-h-0 w-full flex-1 flex-col items-center"
+      data-name="Content"
+    >
+      <AiWorkstationRightHeader
+        icon="CircleX"
+        iconClassName="text-text-danger"
+        title="未安装"
+        titleLineClassName="leading-[22px]"
+      />
+      <AiWorkstationRightDivider inset="wide" />
+      <div
+        className="relative flex w-full shrink-0 items-center justify-center overflow-hidden px-4 py-2"
+        data-name="Subtitle"
+      >
+        <p className="min-w-0 flex-1 text-center text-xs leading-4 text-text-secondary">
+          安装本地AI工作站后
+          <br />
+          Hellome才能连接并使用本地智能体
+        </p>
+      </div>
+      <div
+        className="relative flex w-full shrink-0 flex-col items-center justify-center px-6 py-4"
+        data-name="Actions Wrapper"
+      >
+        <Button
+          icon="Download"
+          size="lg"
+          shape="pill"
+          fullWidth
+          className="gap-2"
+          type="button"
+          data-name="Button"
+        >
+          下载安装
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function AiWorkstationNotConnectedPanelContent({
+  onPairComplete,
+}: {
+  onPairComplete: () => void;
+}) {
+  return (
+    <div
+      className="relative flex min-h-0 w-full flex-1 flex-col items-center"
+      data-name="Content"
+    >
+      <AiWorkstationRightHeader
+        icon="CircleAlert"
+        iconClassName="text-text-warning"
+        title="未连接"
+        titleLineClassName="leading-[22px]"
+      />
+      <AiWorkstationRightDivider inset="wide" />
+      <div
+        className="relative flex w-full shrink-0 items-center justify-center overflow-hidden px-4 py-2"
+        data-name="Subtitle"
+      >
+        <p className="min-w-0 flex-1 text-center text-xs leading-4 text-text-secondary">
+          Hellome 无法直接检查您电脑上的本地程序，请按照下方步骤完成自查后，再手动尝试连接
+        </p>
+      </div>
+      <div
+        className="relative flex w-full shrink-0 flex-col items-start pb-2 pt-4"
+        data-name="Stepper Content"
+      >
+        <div
+          className="relative flex w-full shrink-0 flex-col items-start rounded-card bg-bg-white p-5"
+          data-name="Stepper"
+        >
+          {aiWorkstationPairingSteps.map((step, index) => (
+            <div
+              key={step.title}
+              className="relative flex w-full shrink-0 items-start overflow-hidden"
+              data-name="List Item"
+            >
+              <div
+                className={[
+                  'relative flex shrink-0 self-stretch flex-col items-center pb-0.5',
+                  index === aiWorkstationPairingSteps.length - 1 ? 'gap-0' : 'gap-0.5',
+                ].join(' ')}
+                data-name="Stepper"
+              >
+                <div
+                  className="relative flex shrink-0 items-center"
+                  data-name="icon"
+                >
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-pill bg-bg-black text-xxs font-medium text-text-inverse">
+                    {index + 1}
+                  </span>
+                </div>
+                {index < aiWorkstationPairingSteps.length - 1 && (
+                  <div className="relative flex min-h-0 w-full flex-1 items-center justify-center">
+                    <div className="h-full w-px bg-border-default" />
+                  </div>
+                )}
+              </div>
+              <div
+                className={[
+                  'relative flex min-w-0 flex-1 flex-col items-start gap-1.5 pl-3',
+                  index < aiWorkstationPairingSteps.length - 1 ? 'pb-5' : '',
+                ].join(' ')}
+                data-name="Text Container"
+              >
+                <div
+                  className="relative flex w-full shrink-0 items-center"
+                  data-name="Title"
+                >
+                  <p className="min-w-0 flex-1 text-left text-xs font-medium leading-4 text-text-primary">
+                    {step.title}
+                  </p>
+                </div>
+                <div
+                  className="relative flex w-full shrink-0 items-center overflow-hidden"
+                  data-name="Subtitle"
+                >
+                  <p className="min-w-0 flex-1 text-justify text-label text-text-secondary">
+                    {step.description}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div
+        className="relative flex w-full shrink-0 flex-col items-center justify-center px-6 py-4"
+        data-name="Actions Wrapper"
+      >
+        <Button
+          icon="Check"
+          size="lg"
+          shape="pill"
+          fullWidth
+          className="gap-2"
+          type="button"
+          data-name="Button"
+          onClick={onPairComplete}
+        >
+          我已完成配对
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function getAiWorkstationOverviewMetrics(
+  accountStats: MockAccountStat[],
+): Array<readonly [string, string]> {
+  const overviewStat = accountStats.find((stat) => stat.title === '账户总览');
+  const getMetricValue = (label: string) =>
+    overviewStat?.metrics.find(([metricLabel]) => metricLabel === label)?.[1] ??
+    '0';
+
+  return [
+    ['可用余额', getMetricValue('可用余额')],
+    ['赠送额度', getMetricValue('赠送额度')],
+    ['累计充值', getMetricValue('累计充值')],
+    ['累计消费', getMetricValue('累计消费')],
+  ];
+}
+
+function AiWorkstationConnectedPanelContent({
+  currentUser,
+  accountStats,
+  avatarSrc,
+  nickname,
+  onOverviewClick,
+}: {
+  currentUser: MockUser | null;
+  accountStats: MockAccountStat[];
+  avatarSrc: string;
+  nickname: string;
+  onOverviewClick: () => void;
+}) {
+  const overviewMetrics = getAiWorkstationOverviewMetrics(accountStats);
+  const displayName = nickname || currentUser?.nickname || defaultProfileNickname;
+  const phone = currentUser?.phone ?? '';
+
+  return (
+    <div
+      className="relative flex min-h-0 w-full flex-1 flex-col items-center"
+      data-name="Content"
+    >
+      <AiWorkstationRightHeader
+        icon="CircleCheckBig"
+        iconClassName="text-text-success"
+        title="已连接"
+        titleLineClassName="leading-[22px]"
+      />
+      <div
+        className="relative flex w-full shrink-0 items-center justify-center gap-1.5 py-2 text-text-primary"
+        data-name="Connection Status"
+      >
+        <Icon name="Laptop" size="sm" />
+        <p className="shrink-0 whitespace-nowrap text-left text-xs leading-4">
+          Shiwuan 的电脑
+        </p>
+      </div>
+      <AiWorkstationRightDivider inset="wide" />
+      <div
+        className="relative flex w-full shrink-0 flex-col items-center justify-center gap-2 rounded-lg p-2"
+        data-name="Menu Button"
+      >
+        <div
+          className="relative flex w-full shrink-0 items-center justify-center"
+          data-name="Text Container"
+        >
+          <p className="min-w-0 flex-1 text-center text-label uppercase text-text-hint">
+            当前登录账号
+          </p>
+        </div>
+        <img
+          className="h-10 w-10 shrink-0 rounded-pill object-cover"
+          src={avatarSrc}
+          alt=""
+        />
+        <div
+          className="relative flex w-full shrink-0 flex-col items-center justify-center"
+          data-name="name&phone"
+        >
+          <div
+            className="relative flex w-full shrink-0 items-center justify-center"
+            data-name="name"
+          >
+            <p className="min-w-0 flex-1 truncate text-center text-sm leading-5 text-text-primary">
+              {displayName}
+            </p>
+          </div>
+          <div
+            className="relative flex w-full shrink-0 items-center justify-center"
+            data-name="phone"
+          >
+            <p className="min-w-0 flex-1 truncate text-center text-xs leading-4 text-text-secondary">
+              {phone}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div className="relative flex w-full shrink-0 flex-col items-center justify-center pb-4 pt-2">
+        <Button
+          size="sm"
+          shape="pill"
+          className="w-[160px]"
+          type="button"
+          data-name="Button"
+        >
+          进入工作台
+        </Button>
+      </div>
+      <div
+        className="relative flex w-full shrink-0 items-center justify-between py-3"
+        data-name="Title"
+      >
+        <p className="shrink-0 whitespace-nowrap text-left text-xs uppercase leading-4 text-text-primary">
+          账户概览
+        </p>
+        <button
+          className="relative flex shrink-0 items-center text-text-hint transition-colors hover:text-text-primary active:text-text-secondary"
+          type="button"
+          data-name="More"
+          onClick={onOverviewClick}
+        >
+          <span className="shrink-0 whitespace-nowrap text-center text-xs uppercase leading-4">
+            详情
+          </span>
+          <Icon name="ChevronRight" size="sm" />
+        </button>
+      </div>
+      <div
+        className="relative grid w-full shrink-0 grid-cols-2 gap-1 overflow-hidden rounded-lg text-center"
+        data-name="List Item"
+      >
+        {overviewMetrics.map(([label, value]) => (
+          <div
+            key={label}
+            className="relative flex shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg bg-bg-white p-4"
+            data-name="Content"
+          >
+            <p className="w-full shrink-0 text-sm font-medium leading-5 text-text-primary">
+              {value}
+            </p>
+            <p className="w-full shrink-0 text-label text-text-secondary">
+              {label}
+            </p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -1932,6 +2602,8 @@ function MockDebugPanel({
   onResetAccount,
   onAddExtraAccount,
   onResetExtraAccounts,
+  onAiWorkstationConnectionStatusChange,
+  onResetAiWorkstationConnectionStatus,
   onPushAnnouncement,
   onPushActivity,
 }: {
@@ -1948,6 +2620,10 @@ function MockDebugPanel({
   onResetAccount: () => void;
   onAddExtraAccount: () => void;
   onResetExtraAccounts: () => void;
+  onAiWorkstationConnectionStatusChange: (
+    status: MockAiWorkstationConnectionStatus,
+  ) => void;
+  onResetAiWorkstationConnectionStatus: () => void;
   onPushAnnouncement: () => void;
   onPushActivity: () => void;
 }) {
@@ -2011,6 +2687,14 @@ function MockDebugPanel({
       <div className="mt-2 rounded-button bg-bg-soft px-3 py-2 text-xs leading-4 text-text-secondary">
         <p>状态：{statusText}</p>
         <p>账号：{currentUser?.phone ?? '-'}</p>
+        <p>
+          AI工作站：
+          {currentUser
+            ? aiWorkstationConnectionStatusLabels[
+                currentUser.aiWorkstationConnectionStatus
+              ]
+            : '-'}
+        </p>
         <p>当前账户：{selectedAccount?.name ?? '-'}</p>
       </div>
       <div className="mt-3 grid grid-cols-1 gap-2">
@@ -2042,6 +2726,29 @@ function MockDebugPanel({
             {shortcut.label}
           </Button>
         ))}
+      </div>
+      <div className="mt-3 h-px bg-border-subtle" />
+      <div className="mt-3 grid grid-cols-1 gap-2">
+        {aiWorkstationConnectionStatusOptions.map((status) => (
+          <Button
+            key={status}
+            variant="secondary"
+            size="sm"
+            selected={currentUser?.aiWorkstationConnectionStatus === status}
+            disabled={!isLoggedIn}
+            onClick={() => onAiWorkstationConnectionStatusChange(status)}
+          >
+            {`AI工作站${aiWorkstationConnectionStatusLabels[status]}`}
+          </Button>
+        ))}
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={!isLoggedIn}
+          onClick={onResetAiWorkstationConnectionStatus}
+        >
+          重置连接状态
+        </Button>
       </div>
       <div className="mt-3 h-px bg-border-subtle" />
       <div className="mt-3 grid grid-cols-1 gap-2">
@@ -2115,6 +2822,7 @@ function SideNav({
   profileLabel,
   profileNickname,
   profilePhone,
+  aiWorkstationConnectionStatus,
   currentAccount,
   accounts,
   selectedAccountId,
@@ -2122,6 +2830,7 @@ function SideNav({
   onToggle,
   onPageChange,
   onLoginClick,
+  onAiWorkstationClick,
   onAccountSelect,
   onProfileClick,
   onPolicyClick,
@@ -2139,6 +2848,7 @@ function SideNav({
   profileLabel: string;
   profileNickname: string;
   profilePhone: string;
+  aiWorkstationConnectionStatus: MockAiWorkstationConnectionStatus;
   currentAccount: MockAccount | null;
   accounts: MockAccount[];
   selectedAccountId: string | null;
@@ -2146,6 +2856,7 @@ function SideNav({
   onToggle: () => void;
   onPageChange: (value: PageMode) => void;
   onLoginClick: () => void;
+  onAiWorkstationClick: () => void;
   onAccountSelect: (accountId: string) => void;
   onProfileClick: () => void;
   onPolicyClick: () => void;
@@ -2158,6 +2869,11 @@ function SideNav({
   const [isProfilePopoverOpen, setIsProfilePopoverOpen] = useState(false);
   const profileButtonRef = useRef<HTMLButtonElement | null>(null);
   const profilePopoverRef = useRef<HTMLDivElement | null>(null);
+  const aiWorkstationConnected =
+    aiWorkstationConnectionStatus === 'connected';
+  const aiWorkstationLabel = aiWorkstationConnected
+    ? '已连接AI工作站'
+    : '连接AI工作站';
 
   useEffect(() => {
     if (!isProfilePopoverOpen) {
@@ -2272,29 +2988,34 @@ function SideNav({
         <button
           className="flex h-10 w-full items-center px-2 py-0.5"
           type="button"
-          aria-label={collapsed ? '链接Hz-Hermes' : undefined}
-          title={collapsed ? '链接Hz-Hermes' : undefined}
+          aria-label={collapsed ? aiWorkstationLabel : undefined}
+          title={collapsed ? aiWorkstationLabel : undefined}
+          onClick={onAiWorkstationClick}
         >
           <span
             className={[
               sidebarMenuBaseClassName,
-              'text-accent-teal hover:bg-bg-strong',
+              aiWorkstationConnected ? 'text-accent-teal' : 'text-text-primary',
+              'hover:bg-bg-strong',
               collapsed
                 ? sidebarMenuCollapsedClassName
                 : sidebarMenuExpandedClassName,
             ].join(' ')}
           >
             <img
-              className="h-4 w-4 shrink-0"
+              className={[
+                'h-4 w-4 shrink-0',
+                aiWorkstationConnected ? '' : 'brightness-0',
+              ].join(' ')}
               src="/assets/home/link-me-logo.svg"
               alt=""
             />
             {!collapsed && (
               <>
                 <span className="min-w-0 flex-1 whitespace-nowrap text-left">
-                  链接Hz-Hermes
+                  {aiWorkstationLabel}
                 </span>
-                <Icon name="ArrowUpRight" />
+                <Icon name={aiWorkstationConnected ? 'Check' : 'ChevronRight'} />
               </>
             )}
           </span>
@@ -3806,9 +4527,9 @@ function BillingTabs({
           onClick={() => onActiveTabChange(tab)}
         >
           <span>{tab}</span>
-          <span className="flex h-4 w-4 items-center justify-center rounded-pill text-text-hint">
+          <Tooltip content={billingTabTooltips[tab]}>
             <Icon name="Info" size="2xs" />
-          </span>
+          </Tooltip>
         </button>
       ))}
     </div>
@@ -6753,6 +7474,8 @@ export function HomePage() {
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
+  const [isAiWorkstationModalOpen, setIsAiWorkstationModalOpen] =
+    useState(false);
   const [selectedAgentDetail, setSelectedAgentDetail] =
     useState<AgentCardData | null>(null);
   const [isMarkAllReadModalOpen, setIsMarkAllReadModalOpen] = useState(false);
@@ -7014,6 +7737,7 @@ export function HomePage() {
     isInvoiceModalOpen ||
     isSupportModalOpen ||
     isRechargeModalOpen ||
+    isAiWorkstationModalOpen ||
     isLoginModalOpen ||
     isLoginAccountSelectionModalOpen ||
     isMarkAllReadModalOpen ||
@@ -7713,6 +8437,15 @@ export function HomePage() {
     setIsCreateProjectModalOpen(true);
   }
 
+  function handleAiWorkstationClick() {
+    if (!isLoggedIn) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+
+    setIsAiWorkstationModalOpen(true);
+  }
+
   function handleNotificationMarkAllRead(targetMessageMode: MessageMode) {
     setIsNotificationPopoverOpen(false);
     handleOpenMarkAllReadModal(targetMessageMode);
@@ -7810,6 +8543,37 @@ export function HomePage() {
     setSelectedAccountId(nextAccountData.accounts[0]?.id ?? null);
   }
 
+  function handleMockDebugAiWorkstationConnectionStatusChange(
+    status: MockAiWorkstationConnectionStatus,
+  ) {
+    const nextUser = updateMockAiWorkstationConnectionStatus(status);
+
+    if (nextUser !== null) {
+      applyMockUser(nextUser);
+    }
+  }
+
+  function handleMockDebugResetAiWorkstationConnectionStatus() {
+    const nextUser = resetMockAiWorkstationConnectionStatus();
+
+    if (nextUser !== null) {
+      applyMockUser(nextUser);
+    }
+  }
+
+  function handleAiWorkstationPairComplete() {
+    const nextUser = updateMockAiWorkstationConnectionStatus('connected');
+
+    if (nextUser !== null) {
+      applyMockUser(nextUser);
+    }
+  }
+
+  function handleAiWorkstationOverviewClick() {
+    setIsAiWorkstationModalOpen(false);
+    handlePageChange('account');
+  }
+
   function handleMockDebugAddExtraAccount() {
     const nextAccountData = addMockExtraAccountData(currentUser, seededAccountData);
     const nextSelectedAccount =
@@ -7885,6 +8649,9 @@ export function HomePage() {
         profileLabel={currentAccountDisplayName}
         profileNickname={profileNickname}
         profilePhone={currentUser?.phone ?? ''}
+        aiWorkstationConnectionStatus={
+          currentUser?.aiWorkstationConnectionStatus ?? 'not-connected'
+        }
         currentAccount={currentAccount}
         accounts={accountData.accounts}
         selectedAccountId={resolvedSelectedAccountId}
@@ -7895,6 +8662,7 @@ export function HomePage() {
         }}
         onPageChange={handlePageChange}
         onLoginClick={() => setIsLoginModalOpen(true)}
+        onAiWorkstationClick={handleAiWorkstationClick}
         onAccountSelect={setSelectedAccountId}
         onProfileClick={handleOpenProfileModal}
         onPolicyClick={() => handleOpenPolicyModal('privacy')}
@@ -8084,6 +8852,18 @@ export function HomePage() {
       {isRechargeModalOpen && (
         <RechargeModal onClose={() => setIsRechargeModalOpen(false)} />
       )}
+      {isAiWorkstationModalOpen && (
+        <AiWorkstationConnectionModal
+          status={currentUser?.aiWorkstationConnectionStatus ?? 'not-connected'}
+          currentUser={currentUser}
+          accountStats={accountData.stats}
+          avatarSrc={profileAvatarSrc}
+          nickname={profileNickname}
+          onPairComplete={handleAiWorkstationPairComplete}
+          onOverviewClick={handleAiWorkstationOverviewClick}
+          onClose={() => setIsAiWorkstationModalOpen(false)}
+        />
+      )}
       {selectedAgentDetail && (
         <AgentDetailModal
           agent={selectedAgentDetail}
@@ -8159,6 +8939,12 @@ export function HomePage() {
           onResetAccount={handleMockDebugResetAccount}
           onAddExtraAccount={handleMockDebugAddExtraAccount}
           onResetExtraAccounts={handleMockDebugResetExtraAccounts}
+          onAiWorkstationConnectionStatusChange={
+            handleMockDebugAiWorkstationConnectionStatusChange
+          }
+          onResetAiWorkstationConnectionStatus={
+            handleMockDebugResetAiWorkstationConnectionStatus
+          }
           onPushAnnouncement={() => handleMockDebugPushMessage('announcements')}
           onPushActivity={() => handleMockDebugPushMessage('activity')}
         />

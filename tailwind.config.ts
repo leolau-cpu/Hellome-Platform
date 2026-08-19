@@ -49,6 +49,7 @@ export default {
           },
         },
         accent: {
+          warningSoft: '#FFE5CC',
           orange: '#FF922B',
           red: '#FF5C4D',
           redHover: '#FF796D',
@@ -72,11 +73,14 @@ export default {
           mask: 'rgb(0 0 0 / 0.08)',
           edge: 'rgb(0 0 0 / 0.08)',
           clear: 'rgb(0 0 0 / 0)',
+          white8: 'rgb(255 255 255 / 0.04)',
+          white12: 'rgb(255 255 255 / 0.12)',
         },
       },
       fontSize: {
         xxs: ['10px', '13px'],
         label: ['11px', '14px'],
+        'brand-sm': ['25px', '32px'],
         xs: ['12px', '16px'],
         sm: ['14px', '20px'],
         base: ['16px', '24px'],
@@ -112,6 +116,8 @@ export default {
         'border-bottom-default': 'inset 0 -1px 0 #EAEAEA',
         'avatar-border': '0 0 0 1px rgb(0 0 0 / 0.04)',
         'card-hover': '0 8px 24px rgb(0 0 0 / 0.05)',
+        'ai-workstation-modal':
+          '0 0 0 1px rgb(255 255 255 / 0.12), 0 8px 24px rgb(0 0 0 / 0.05)',
         popover: 'inset 0 0 0 1px #EAEAEA, 0 8px 24px rgb(0 0 0 / 0.05)',
         'popover-strong':
           'inset 0 0 0 1px #E5E5E5, 0 8px 24px rgb(0 0 0 / 0.05), 0 0 24px rgb(0 0 0 / 0.05)',

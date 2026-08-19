@@ -31,6 +31,7 @@ import {
 import { SearchInput } from '../components/ui/SearchInput';
 import { TabBar } from '../components/ui/TabBar';
 import { TabButton } from '../components/ui/TabButton';
+import { Tooltip } from '../components/ui/Tooltip';
 
 const buttonVariants = ['primary', 'secondary', 'text', 'warning', 'notice'] as const;
 const buttonSizes = ['xl', 'lg', 'md', 'sm', 'xs'] as const;
@@ -134,6 +135,7 @@ const colorGroups = [
 const typographyItems = [
   { token: 'text-xxs', className: 'text-xxs', fontSize: '10px', lineHeight: '13px', sample: '极小状态标签 / Tiny Badge' },
   { token: 'text-label', className: 'text-label', fontSize: '11px', lineHeight: '14px', sample: '极小角标 / Micro Label' },
+  { token: 'text-brand-sm', className: 'text-brand-sm', fontSize: '25px', lineHeight: '32px', sample: '品牌小标题 / Brand Label' },
   { token: 'text-xs', className: 'text-xs', fontSize: '12px', lineHeight: '16px', sample: '辅助信息 / Caption' },
   { token: 'text-sm', className: 'text-sm', fontSize: '14px', lineHeight: '20px', sample: '正文文本 / Body' },
   { token: 'text-base', className: 'text-base', fontSize: '16px', lineHeight: '24px', sample: '强调正文 / Body Large' },
@@ -1068,6 +1070,38 @@ export function DesignSystemPage() {
 
         <Section
           index="11"
+          name="Tooltip"
+          title="提示气泡"
+          description="Tooltip 用于 icon 或短文本的 hover / focus 辅助说明。气泡最大宽度 320px，最大高度 172px，不含箭头；内容超出时在气泡内部滚动。"
+        >
+          <div className="flex flex-wrap items-start gap-10">
+            <div className="grid gap-2">
+              <div className="text-sm font-medium text-text-primary">Regular size</div>
+              <div className="flex items-center gap-3">
+                <Tooltip content="按自然日汇总的消费、原价与折扣">
+                  <Icon name="Info" size="2xs" />
+                </Tooltip>
+                <span className="text-sm leading-5 text-text-secondary">
+                  Hover / focus icon
+                </span>
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <div className="text-sm font-medium text-text-primary">Max width / height</div>
+              <div className="flex items-center gap-3">
+                <Tooltip content="Tooltip 气泡最大宽度为 320px，最大高度为 172px，箭头尺寸为 12px × 8px。内容超过最大高度时，气泡内部滚动，箭头不计入最大高度。这里展示的是最大尺寸和内部滚动效果，用于检查边框、投影、圆角、文字行高、内部上下 6px 左右 12px 间距，以及长内容在固定高度内滚动时的视觉表现。当说明文字继续增加时，内容不会撑开气泡，而是在气泡内部滚动，保证浮层不会占用过多屏幕空间。这段补充文本用于填满高度，方便观察最大高度限制和内部滚动区域。继续补充一些说明内容，让文本高度超过 172px 后可以在 Tooltip 内部滚动。滚动区域只存在于气泡本体，不包含下方箭头。">
+                  <Icon name="Info" size="2xs" />
+                </Tooltip>
+                <span className="text-sm leading-5 text-text-secondary">
+                  Hover / focus icon
+                </span>
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        <Section
+          index="12"
           name="Modal"
           title="模态弹窗"
           description="Modal 按尺寸档沉淀模式控件：360 InfoModal、480 ConfirmModal / FormModal、640 FeatureModal、720 ContentModal、960 WorkflowModal。最大高度按窗口上下各 80px 安全间距限制，内容超出时只滚动 Body，Header / Footer 保持可见。"
