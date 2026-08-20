@@ -40,6 +40,7 @@ import {
   mockAccountChangedEventName,
   resetMockExtraAccountData,
   resetMockAccountData,
+  updateMockAccountAvatar,
   updateMockAccountName,
   type MockAccount,
   type MockAccountData,
@@ -193,6 +194,42 @@ const profilePresetAvatarSrcs = [
   '/assets/avatars/avatar-male-4.png',
   '/assets/avatars/avatar-female-4.png',
 ] as const satisfies readonly string[];
+
+const enterpriseAvatarPresetPrefix = 'enterprise-avatar:';
+const enterpriseAvatarPresets = [
+  {
+    value: `${enterpriseAvatarPresetPrefix}black`,
+    previewClassName: 'bg-bg-black text-text-inverse',
+  },
+  {
+    value: `${enterpriseAvatarPresetPrefix}red`,
+    previewClassName: 'bg-accent-red text-text-inverse',
+  },
+  {
+    value: `${enterpriseAvatarPresetPrefix}orange`,
+    previewClassName: 'bg-accent-orange text-text-inverse',
+  },
+  {
+    value: `${enterpriseAvatarPresetPrefix}green`,
+    previewClassName: 'bg-accent-green text-text-inverse',
+  },
+  {
+    value: `${enterpriseAvatarPresetPrefix}blue`,
+    previewClassName: 'bg-accent-blue text-text-inverse',
+  },
+  {
+    value: `${enterpriseAvatarPresetPrefix}indigo`,
+    previewClassName: 'bg-accent-indigo text-text-inverse',
+  },
+  {
+    value: `${enterpriseAvatarPresetPrefix}violet`,
+    previewClassName: 'bg-accent-violet text-text-inverse',
+  },
+  {
+    value: `${enterpriseAvatarPresetPrefix}magenta`,
+    previewClassName: 'bg-accent-magenta text-text-inverse',
+  },
+] as const;
 
 const accountKeyOptions = ['全部APIKey', 'Hermes Desktop'] as const;
 const sortFilterOptions = ['最热', '最新', '查看最多', '使用最多'] as const;
@@ -1427,6 +1464,17 @@ function getAccountInitial(accountName: string) {
   return accountName.trim().charAt(0) || '企';
 }
 
+function isEnterpriseAvatarPreset(value?: string) {
+  return value?.startsWith(enterpriseAvatarPresetPrefix) ?? false;
+}
+
+function getEnterpriseAvatarPreset(value?: string) {
+  return (
+    enterpriseAvatarPresets.find((preset) => preset.value === value) ??
+    enterpriseAvatarPresets[0]
+  );
+}
+
 function getAccountDisplayName(account: MockAccount | null, nickname: string) {
   if (account?.type === 'enterprise') return account.name;
 
@@ -1500,13 +1548,21 @@ function AccountAvatar({
 }) {
   const sizeClassName =
     size === 'sm' ? 'h-4 w-4 text-xxs' : size === 'lg' ? 'h-9 w-9 text-sm' : 'h-8 w-8 text-sm';
+  const resolvedAvatarSrc =
+    account?.type === 'enterprise' ? account.avatarSrc : avatarSrc;
 
-  if (account?.type === 'enterprise') {
+  if (
+    account?.type === 'enterprise' &&
+    (!resolvedAvatarSrc || isEnterpriseAvatarPreset(resolvedAvatarSrc))
+  ) {
+    const preset = getEnterpriseAvatarPreset(resolvedAvatarSrc);
+
     return (
       <span
         className={[
-          'flex shrink-0 items-center justify-center rounded-pill bg-bg-black font-medium leading-5 text-text-inverse',
+          'flex shrink-0 items-center justify-center rounded-pill font-medium leading-5',
           sizeClassName,
+          preset.previewClassName,
         ].join(' ')}
       >
         {getAccountInitial(account.name)}
@@ -1521,7 +1577,7 @@ function AccountAvatar({
         sizeClassName,
       ].join(' ')}
     >
-      <img className="h-full w-full object-cover" src={avatarSrc} alt="" />
+      <img className="h-full w-full object-cover" src={resolvedAvatarSrc} alt="" />
     </span>
   );
 }
@@ -4221,6 +4277,9 @@ function ProfileModal({
   const overlayPointerStartedRef = useRef(false);
   const isEnterpriseProfile = account?.type === 'enterprise';
   const canSaveProfile = draftNickname.trim().length > 0;
+  const enterpriseAvatarPreset = getEnterpriseAvatarPreset(avatarSrc);
+  const shouldShowEnterpriseTextAvatar =
+    isEnterpriseProfile && (!avatarSrc || isEnterpriseAvatarPreset(avatarSrc));
 
   const handleAvatarFileChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -4338,80 +4397,110 @@ function ProfileModal({
         </div>
 
         <div className="flex w-full flex-col items-start justify-center gap-4 px-6 py-4">
-          {isEnterpriseProfile ? (
-            <div className="flex w-full flex-col items-center gap-2">
-              <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-pill bg-bg-black text-2xl font-medium leading-8 text-text-inverse shadow-avatar-border">
-                {getAccountInitial(draftNickname)}
-              </div>
-              <p className="text-center text-xs leading-4 text-text-hint">
-                企业账号标识
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="flex w-full flex-col items-center gap-2">
-                <button
-                  className="group relative h-24 w-24 shrink-0 rounded-pill outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-selected"
-                  type="button"
-                  aria-label="修改头像"
-                  onClick={() => avatarInputRef.current?.click()}
-                >
-                  <div className="absolute inset-0 overflow-hidden rounded-pill shadow-avatar-border">
+          <div className="flex w-full flex-col items-center gap-2">
+            <button
+              className="group relative h-24 w-24 shrink-0 rounded-pill outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-selected"
+              type="button"
+              aria-label={isEnterpriseProfile ? '修改企业头像' : '修改头像'}
+              onClick={() => avatarInputRef.current?.click()}
+            >
+              <div className="absolute inset-0 overflow-hidden rounded-pill shadow-avatar-border">
+                {shouldShowEnterpriseTextAvatar ? (
+                  <span
+                    className={[
+                      'flex h-full w-full items-center justify-center rounded-pill text-5xl font-medium',
+                      enterpriseAvatarPreset.previewClassName,
+                    ].join(' ')}
+                  >
+                    {getAccountInitial(draftNickname)}
+                  </span>
+                ) : (
                     <img
                       className="h-full w-full rounded-pill object-cover"
                       src={avatarSrc}
                       alt=""
                     />
-                  </div>
-                  <span className="absolute inset-0 rounded-pill bg-bg-black/0 transition-colors group-hover:bg-bg-black/40 group-active:bg-bg-black/60" />
-                  <span className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-pill bg-bg-white shadow-border-strong hover:bg-bg-soft active:bg-bg-medium">
-                    <Icon name="ImagePlus" size="2xs" strokeWidth={1} />
-                  </span>
-                </button>
-                <input
-                  ref={avatarInputRef}
-                  className="hidden"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarFileChange}
-                />
-                <p className="text-center text-xs leading-4 text-text-hint">
-                  点击修改头像
-                </p>
+                )}
               </div>
+              <span className="absolute inset-0 rounded-pill bg-bg-black/0 transition-colors group-hover:bg-bg-black/40 group-active:bg-bg-black/60" />
+              <span className="absolute bottom-0 right-0 flex h-6 w-6 items-center justify-center rounded-pill bg-bg-white shadow-border-strong hover:bg-bg-soft active:bg-bg-medium">
+                <Icon name="ImagePlus" size="2xs" strokeWidth={1} />
+              </span>
+            </button>
+            <input
+              ref={avatarInputRef}
+              className="hidden"
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarFileChange}
+            />
+            <p className="text-center text-xs leading-4 text-text-hint">
+              点击修改头像
+            </p>
+          </div>
 
-              <div
-                className="flex w-full items-center justify-center gap-1 py-2"
-                aria-label="默认头像"
-              >
-                {presetAvatarSrcs.map((presetAvatarSrc) => {
-                  const isSelected = avatarSrc === presetAvatarSrc;
+          <div
+            className="flex w-full items-center justify-center gap-1 py-2"
+            aria-label="默认头像"
+          >
+            {isEnterpriseProfile ? (
+              enterpriseAvatarPresets.map((preset) => {
+                const isSelected =
+                  avatarSrc === preset.value || (!avatarSrc && preset === enterpriseAvatarPresets[0]);
 
-                  return (
-                    <button
-                      key={presetAvatarSrc}
+                return (
+                  <button
+                    key={preset.value}
+                    className={[
+                      'flex shrink-0 items-center justify-center rounded-pill p-1 transition-shadow',
+                      isSelected
+                        ? 'shadow-border-selected'
+                        : 'hover:shadow-border-strong active:shadow-border-selected',
+                    ].join(' ')}
+                    type="button"
+                    aria-label="选择企业默认头像"
+                    aria-pressed={isSelected}
+                    onClick={() => onAvatarPresetSelect(preset.value)}
+                  >
+                    <span
                       className={[
-                        'flex shrink-0 items-center justify-center rounded-pill p-1 transition-shadow',
-                        isSelected
-                          ? 'shadow-border-selected'
-                          : 'hover:shadow-border-strong active:shadow-border-selected',
+                        'flex h-8 w-8 items-center justify-center rounded-pill text-sm font-medium leading-5',
+                        preset.previewClassName,
                       ].join(' ')}
-                      type="button"
-                      aria-label="选择默认头像"
-                      aria-pressed={isSelected}
-                      onClick={() => onAvatarPresetSelect(presetAvatarSrc)}
                     >
-                      <img
-                        className="h-8 w-8 rounded-pill object-cover"
-                        src={presetAvatarSrc}
-                        alt=""
-                      />
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
+                      {getAccountInitial(draftNickname)}
+                    </span>
+                  </button>
+                );
+              })
+            ) : (
+              presetAvatarSrcs.map((presetAvatarSrc) => {
+                const isSelected = avatarSrc === presetAvatarSrc;
+
+                return (
+                  <button
+                    key={presetAvatarSrc}
+                    className={[
+                      'flex shrink-0 items-center justify-center rounded-pill p-1 transition-shadow',
+                      isSelected
+                        ? 'shadow-border-selected'
+                        : 'hover:shadow-border-strong active:shadow-border-selected',
+                    ].join(' ')}
+                    type="button"
+                    aria-label="选择默认头像"
+                    aria-pressed={isSelected}
+                    onClick={() => onAvatarPresetSelect(presetAvatarSrc)}
+                  >
+                    <img
+                      className="h-8 w-8 rounded-pill object-cover"
+                      src={presetAvatarSrc}
+                      alt=""
+                    />
+                  </button>
+                );
+              })
+            )}
+          </div>
 
           <div className="flex w-full flex-col items-center gap-2">
             <label
@@ -4640,6 +4729,134 @@ function PolicyModal({
   );
 }
 
+function PaymentServiceAgreementModal({ onClose }: { onClose: () => void }) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [agreementText, setAgreementText] = useState('');
+  const closeTimerRef = useRef<number | null>(null);
+  const overlayPointerStartedRef = useRef(false);
+
+  const closeWithAnimation = useCallback(() => {
+    setIsVisible(false);
+
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+    }
+
+    closeTimerRef.current = window.setTimeout(() => {
+      onClose();
+    }, 180);
+  }, [onClose]);
+
+  useEffect(() => {
+    const animationFrame = window.requestAnimationFrame(() => {
+      setIsVisible(true);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadAgreementText() {
+      try {
+        const nextAgreementText = await fetch(
+          '/assets/legal/payment-service-agreement.txt',
+        ).then((response) => response.text());
+
+        if (isMounted) {
+          setAgreementText(nextAgreementText);
+        }
+      } catch {
+        if (isMounted) {
+          setAgreementText('付费服务协议加载失败，请稍后重试。');
+        }
+      }
+    }
+
+    loadAgreementText();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        closeWithAnimation();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+
+      if (closeTimerRef.current !== null) {
+        window.clearTimeout(closeTimerRef.current);
+      }
+    };
+  }, [closeWithAnimation]);
+
+  return (
+    <div
+      className={[
+        'fixed inset-0 z-[60] flex items-center justify-center bg-bg-black/40 transition-opacity duration-200 ease-out',
+        isVisible ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
+      ].join(' ')}
+      role="presentation"
+      onPointerDown={(event) => {
+        overlayPointerStartedRef.current = event.target === event.currentTarget;
+      }}
+      onClick={(event) => {
+        if (
+          overlayPointerStartedRef.current &&
+          event.target === event.currentTarget
+        ) {
+          closeWithAnimation();
+        }
+
+        overlayPointerStartedRef.current = false;
+      }}
+    >
+      <div
+        className={[
+          'flex h-[640px] w-[720px] shrink-0 flex-col items-center overflow-hidden rounded-modal bg-bg-white shadow-[0_8px_12px_rgb(0_0_0_/_0.05),0_0_12px_rgb(0_0_0_/_0.05)] transition-all duration-200 ease-out',
+          isVisible ? 'scale-100 opacity-100' : 'scale-95 opacity-0',
+        ].join(' ')}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="payment-service-agreement-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex w-full items-center justify-end gap-2 pb-2 pl-6 pr-4 pt-4">
+          <div className="flex h-full min-w-0 flex-1 items-center gap-4">
+            <h2
+              id="payment-service-agreement-title"
+              className="h-6 shrink-0 text-base font-medium leading-6 text-text-primary"
+            >
+              付费服务协议
+            </h2>
+          </div>
+          <ModalCloseButton aria-label="关闭付费服务协议弹窗" onClick={closeWithAnimation} />
+        </div>
+
+        <div className="relative flex min-h-0 w-full flex-1 items-start overflow-hidden px-6">
+          <div className="h-full w-full overflow-y-auto">
+            <div className="w-full whitespace-pre-wrap py-4 text-sm font-normal leading-5 text-text-primary">
+              {agreementText || '文档加载中...'}
+            </div>
+          </div>
+          <div className="pointer-events-none absolute inset-x-6 bottom-0 h-4 bg-bg-white" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MarkAllReadModal({
   onClose,
   onConfirm,
@@ -4696,11 +4913,27 @@ const rechargeOptions: RechargeOption[] = [
   { amount: 5000 },
 ];
 
-function RechargeModal({ onClose }: { onClose: () => void }) {
+function getRechargeDiscountAmount(discount?: string) {
+  const discountAmount = discount?.match(/[\d.]+/)?.[0];
+  return discountAmount ? Number(discountAmount) : 0;
+}
+
+function RechargeModal({
+  onClose,
+  onPaymentAgreementClick,
+}: {
+  onClose: () => void;
+  onPaymentAgreementClick: () => void;
+}) {
   const [selectedAmount, setSelectedAmount] = useState(100);
   const [qrExpiresIn, setQrExpiresIn] = useState(60);
   const [qrRefreshVersion, setQrRefreshVersion] = useState(0);
   const isQrExpired = qrExpiresIn === 0;
+  const selectedRechargeOption =
+    rechargeOptions.find((option) => option.amount === selectedAmount) ??
+    rechargeOptions[0];
+  const paymentAmount =
+    selectedAmount - getRechargeDiscountAmount(selectedRechargeOption.discount);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -4718,12 +4951,13 @@ function RechargeModal({ onClose }: { onClose: () => void }) {
       showCloseButton={false}
       bodyPadding={false}
       panelClassName="h-[560px]"
+      bodyScroll="none"
       bodyClassName="h-full"
       onClose={onClose}
     >
       {({ close }) => (
       <div className="relative flex h-full items-start overflow-hidden">
-        <div className="relative flex h-full min-w-0 flex-1 flex-col items-center gap-6 overflow-hidden p-10">
+        <div className="relative h-full min-w-0 flex-1 overflow-hidden">
           <div className="pointer-events-none absolute left-0 top-0 h-[152px] w-[680px] overflow-hidden">
             <img
               className="h-full w-full object-cover object-top"
@@ -4731,120 +4965,137 @@ function RechargeModal({ onClose }: { onClose: () => void }) {
               alt=""
             />
           </div>
-          <div className="relative flex w-full flex-col items-start pb-6 shadow-border-bottom-subtle">
-            <div className="flex w-full flex-col gap-2">
-              <h2
-                id="recharge-modal-title"
-                className="w-full truncate text-lg font-medium leading-7 text-text-primary"
-              >
-                充值
-              </h2>
-              <p className="text-xs leading-4 text-text-hint">
-                本余额用于抵扣平台提供的 AI 大模型调用费用。系统将根据您选择的模型计费标准，按实际消耗的 Token（字符单位）实时扣费，确保计量精准透明。
-              </p>
-            </div>
-          </div>
-          <div className="grid w-full shrink-0 grid-cols-4 gap-2 overflow-hidden">
-            {rechargeOptions.map((option) => {
-              const isSelected = option.amount === selectedAmount;
-
-              return (
-                <button
-                  key={option.amount}
-                  className={[
-                    'relative flex h-[84px] flex-col items-start rounded-card p-5 text-left transition hover:bg-bg-soft active:bg-bg-medium',
-                    isSelected
-                      ? 'bg-bg-soft shadow-border-selected-strong'
-                      : 'shadow-border-strong',
-                  ].join(' ')}
-                  type="button"
-                  onClick={() => setSelectedAmount(option.amount)}
+          <div className="relative flex h-full min-w-0 flex-col items-center gap-6 overflow-y-auto overflow-x-hidden p-10">
+            <div className="relative flex w-full flex-col items-start pb-6 shadow-border-bottom-subtle">
+              <div className="flex w-full flex-col gap-2">
+                <h2
+                  id="recharge-modal-title"
+                  className="w-full truncate text-lg font-medium leading-7 text-text-primary"
                 >
-                  <div className="flex flex-col gap-0.5">
-                    <div className="flex h-[26px] items-start gap-0.5">
-                      <span className="flex h-[26px] items-end pb-px text-sm leading-5 text-text-primary">
-                        ¥
-                      </span>
-                      <span className="text-lg font-medium leading-7 text-text-primary">
-                        {option.amount}
-                      </span>
+                  充值
+                </h2>
+                <p className="text-xs leading-4 text-text-hint">
+                  本余额用于抵扣平台提供的 AI 大模型调用费用。系统将根据您选择的模型计费标准，按实际消耗的 Token（字符单位）实时扣费，确保计量精准透明。
+                </p>
+              </div>
+            </div>
+            <div className="grid w-full shrink-0 grid-cols-4 gap-2 overflow-hidden">
+              {rechargeOptions.map((option) => {
+                const isSelected = option.amount === selectedAmount;
+
+                return (
+                  <button
+                    key={option.amount}
+                    className={[
+                      'relative flex h-[84px] flex-col items-start rounded-card p-5 text-left transition hover:bg-bg-soft active:bg-bg-medium',
+                      isSelected
+                        ? 'bg-bg-soft shadow-border-selected-strong'
+                        : 'shadow-border-strong',
+                    ].join(' ')}
+                    type="button"
+                    onClick={() => setSelectedAmount(option.amount)}
+                  >
+                    <div className="flex flex-col gap-0.5">
+                      <div className="flex h-[26px] items-start gap-0.5">
+                        <span className="flex h-[26px] items-end pb-px text-sm leading-5 text-text-primary">
+                          ¥
+                        </span>
+                        <span className="text-lg font-medium leading-7 text-text-primary">
+                          {option.amount}
+                        </span>
+                      </div>
+                      {option.discount && (
+                        <span className="text-xs leading-4 text-accent-error">
+                          {option.discount}
+                        </span>
+                      )}
                     </div>
-                    {option.discount && (
-                      <span className="text-xs leading-4 text-accent-error">
-                        {option.discount}
+                    {option.label && (
+                      <span
+                        className={[
+                          'absolute right-0 top-0 flex h-[18px] items-center justify-center rounded-bl-button rounded-tr-card px-2 text-center text-label text-text-inverse',
+                          option.labelTone === 'red' ? 'bg-accent-red' : 'bg-bg-black',
+                        ].join(' ')}
+                      >
+                        {option.label}
                       </span>
                     )}
-                  </div>
-                  {option.label && (
-                    <span
-                      className={[
-                        'absolute right-0 top-0 flex h-[18px] items-center justify-center rounded-bl-button rounded-tr-card px-2 text-center text-label text-text-inverse',
-                        option.labelTone === 'red' ? 'bg-accent-red' : 'bg-bg-black',
-                      ].join(' ')}
-                    >
-                      {option.label}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          <div className="w-full text-xs leading-4 text-text-hint">
-            <ul className="list-disc space-y-1 pl-[18px]">
-              <li>API 算力额度属于虚拟商品，专用于接口调用，一经充值不可提现或退款，请按需购买。</li>
-              <li>为了保障您的账户安全与充值体验的顺畅，您每月最多可以享受30次充值服务。</li>
-              <li>1天内未支付的订单，会自动关闭。</li>
-              <li>若充值过程遇到交易问题，请前往相应的第三方支付平台进行确认。</li>
-              <li>未成年用户请在监护人陪同下理性充值，避免过度消费。</li>
-              <li>充值完成后可前往账户总览查看账户余额。</li>
-            </ul>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="w-full text-xs leading-4 text-text-hint">
+              <ul className="list-disc space-y-1 pl-[18px]">
+                <li>API 算力额度属于虚拟商品，专用于接口调用，一经充值不可提现或退款，请按需购买。</li>
+                <li>为了保障您的账户安全与充值体验的顺畅，您每月最多可以享受30次充值服务。</li>
+                <li>1天内未支付的订单，会自动关闭。</li>
+                <li>若充值过程遇到交易问题，请前往相应的第三方支付平台进行确认。</li>
+                <li>未成年用户请在监护人陪同下理性充值，避免过度消费。</li>
+                <li>充值完成后可前往账户总览查看账户余额。</li>
+              </ul>
+            </div>
           </div>
         </div>
-        <div className="flex h-full w-[280px] shrink-0 flex-col items-center justify-center gap-4 bg-bg-soft px-6 py-14">
-          <div className="flex w-full items-start justify-center gap-1 text-accent-error">
-            <span className="flex h-[45px] w-2.5 items-end pb-1 text-lg font-medium leading-7">
-              ¥
-            </span>
-            <span className="text-4xl font-semibold leading-[45px]">
-              {selectedAmount.toFixed(1)}
-            </span>
-          </div>
-          <div className="relative flex h-[180px] w-[180px] shrink-0 items-center justify-center rounded-button bg-bg-white p-3 shadow-border-strong">
-            <img
-              className="h-full w-full object-cover"
-              src={`/assets/home/recharge-qr.png?v=${qrRefreshVersion}`}
-              alt=""
-            />
-            {isQrExpired && (
-              <button
-                className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-button bg-bg-white/90 text-text-secondary backdrop-blur-qr transition hover:text-text-primary active:bg-bg-white/90"
-                type="button"
-                onClick={() => {
-                  setQrRefreshVersion((currentVersion) => currentVersion + 1);
-                  setQrExpiresIn(60);
-                }}
-              >
-                <Icon name="RefreshCw" size="lg" />
-                <span className="text-sm leading-5">点击刷新</span>
-              </button>
-            )}
-          </div>
-          <p className="w-full text-center text-xs leading-4 text-text-hint">
-            {qrExpiresIn}秒后二维码失效
-          </p>
-          <div className="flex w-full items-center justify-center gap-1 text-xs leading-4 text-text-hint">
-            <span>使用</span>
-            <img className="h-3 w-3" src="/assets/home/recharge-wepay.svg" alt="" />
-            <span>微信/</span>
-            <img className="h-3 w-3" src="/assets/home/recharge-alipay.svg" alt="" />
-            <span>支付宝</span>
-            <span>扫码支付</span>
-          </div>
-          <div className="w-full text-center text-xs leading-4 text-text-hint">
-            <p>
-              支付即视为你同意
+        <div className="h-full w-[280px] shrink-0 overflow-hidden bg-bg-soft">
+          <div className="h-full w-full overflow-y-auto overflow-x-hidden px-6">
+            <div className="flex min-h-full w-full flex-col items-center justify-center gap-4 py-14">
+            <div className="flex w-full flex-col items-center gap-1">
+              <div className="flex w-full items-start justify-center gap-1 text-accent-error">
+                <span className="flex h-10 w-2.5 items-end pb-0.5 text-lg font-medium">
+                  ¥
+                </span>
+                <span className="text-4xl font-semibold">
+                  {paymentAmount.toFixed(0)}
+                </span>
+              </div>
+              <p className="w-full text-center text-xs leading-4 text-text-primary">
+                实际到账 {selectedAmount}元
+              </p>
+            </div>
+            <div className="relative flex h-[180px] w-[180px] shrink-0 items-center justify-center rounded-button bg-bg-white p-3 shadow-border-strong">
+              <img
+                className="h-full w-full object-cover"
+                src={`/assets/home/recharge-qr.png?v=${qrRefreshVersion}`}
+                alt=""
+              />
+              {isQrExpired && (
+                <button
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-button bg-bg-white/90 text-text-secondary backdrop-blur-qr transition hover:text-text-primary active:bg-bg-white/90"
+                  type="button"
+                  onClick={() => {
+                    setQrRefreshVersion((currentVersion) => currentVersion + 1);
+                    setQrExpiresIn(60);
+                  }}
+                >
+                  <Icon name="RefreshCw" size="lg" />
+                  <span className="text-sm leading-5">点击刷新</span>
+                </button>
+              )}
+            </div>
+            <p className="w-full text-center text-xs leading-4 text-text-hint">
+              {qrExpiresIn}秒后二维码失效
             </p>
-            <p className="text-accent-link">《付费服务协议》</p>
+            <div className="flex w-full items-center justify-center gap-1 text-xs leading-4 text-text-hint">
+              <span>使用</span>
+              <img className="h-3 w-3" src="/assets/home/recharge-wepay.svg" alt="" />
+              <span>微信/</span>
+              <img className="h-3 w-3" src="/assets/home/recharge-alipay.svg" alt="" />
+              <span>支付宝</span>
+              <span>扫码支付</span>
+            </div>
+            <div className="w-full text-center text-xs leading-4 text-text-hint">
+              <p>
+                支付即视为你同意
+              </p>
+              <button
+                className="text-accent-link transition-colors hover:text-accent-blueHover active:text-accent-linkBlueActive"
+                type="button"
+                onClick={onPaymentAgreementClick}
+              >
+                《付费服务协议》
+              </button>
+            </div>
+            </div>
           </div>
         </div>
         <div className="absolute right-0 top-0 flex items-center justify-end pb-2 pl-2 pr-4 pt-4">
@@ -7909,6 +8160,8 @@ export function HomePage() {
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
+  const [isPaymentAgreementModalOpen, setIsPaymentAgreementModalOpen] =
+    useState(false);
   const [isCustomAgentModalOpen, setIsCustomAgentModalOpen] = useState(false);
   const [isAiWorkstationModalOpen, setIsAiWorkstationModalOpen] =
     useState(false);
@@ -7975,26 +8228,6 @@ export function HomePage() {
       [getMessageStateKey('activity', '已读')]: new Set(),
     }),
   );
-
-  const handleProfileAvatarChange = useCallback((file: File) => {
-    const reader = new FileReader();
-
-    reader.addEventListener('load', () => {
-      if (typeof reader.result !== 'string') {
-        return;
-      }
-
-      setProfileAvatarSrc(reader.result);
-      updateMockUserProfile({ avatarSrc: reader.result });
-    });
-
-    reader.readAsDataURL(file);
-  }, []);
-
-  const handleProfileAvatarPresetSelect = useCallback((avatarSrc: string) => {
-    setProfileAvatarSrc(avatarSrc);
-    updateMockUserProfile({ avatarSrc });
-  }, []);
 
   const handleCloseProfileModal = useCallback(() => {
     setIsProfileModalOpen(false);
@@ -8101,6 +8334,56 @@ export function HomePage() {
     [currentAccount, currentUser],
   );
 
+  const handleProfileAvatarChange = useCallback(
+    (file: File) => {
+      const reader = new FileReader();
+
+      reader.addEventListener('load', () => {
+        if (typeof reader.result !== 'string') {
+          return;
+        }
+
+        if (currentAccount?.type === 'enterprise') {
+          setAccountData(
+            updateMockAccountAvatar(
+              currentUser,
+              seededAccountData,
+              currentAccount.id,
+              reader.result,
+            ),
+          );
+          return;
+        }
+
+        setProfileAvatarSrc(reader.result);
+        updateMockUserProfile({ avatarSrc: reader.result });
+      });
+
+      reader.readAsDataURL(file);
+    },
+    [currentAccount, currentUser],
+  );
+
+  const handleProfileAvatarPresetSelect = useCallback(
+    (avatarSrc: string) => {
+      if (currentAccount?.type === 'enterprise') {
+        setAccountData(
+          updateMockAccountAvatar(
+            currentUser,
+            seededAccountData,
+            currentAccount.id,
+            avatarSrc,
+          ),
+        );
+        return;
+      }
+
+      setProfileAvatarSrc(avatarSrc);
+      updateMockUserProfile({ avatarSrc });
+    },
+    [currentAccount, currentUser],
+  );
+
   useEffect(() => {
     if (!isLoggedIn) {
       if (selectedAccountId !== null) {
@@ -8173,6 +8456,7 @@ export function HomePage() {
     isInvoiceModalOpen ||
     isSupportModalOpen ||
     isRechargeModalOpen ||
+    isPaymentAgreementModalOpen ||
     isCustomAgentModalOpen ||
     isAiWorkstationModalOpen ||
     isLoginModalOpen ||
@@ -9288,7 +9572,15 @@ export function HomePage() {
         />
       )}
       {isRechargeModalOpen && (
-        <RechargeModal onClose={() => setIsRechargeModalOpen(false)} />
+        <RechargeModal
+          onClose={() => setIsRechargeModalOpen(false)}
+          onPaymentAgreementClick={() => setIsPaymentAgreementModalOpen(true)}
+        />
+      )}
+      {isPaymentAgreementModalOpen && (
+        <PaymentServiceAgreementModal
+          onClose={() => setIsPaymentAgreementModalOpen(false)}
+        />
       )}
       {isCustomAgentModalOpen && (
         <CustomAgentModal onClose={() => setIsCustomAgentModalOpen(false)} />
@@ -9393,7 +9685,11 @@ export function HomePage() {
       {isProfileModalOpen && (
         <ProfileModal
           account={currentAccount}
-          avatarSrc={profileAvatarSrc}
+          avatarSrc={
+            currentAccount?.type === 'enterprise'
+              ? currentAccount.avatarSrc ?? ''
+              : profileAvatarSrc
+          }
           nickname={
             currentAccount?.type === 'enterprise'
               ? currentAccount.name

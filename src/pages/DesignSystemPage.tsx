@@ -127,6 +127,9 @@ const colorGroups = [
       { token: 'accent.orange', value: 'FF922B', className: 'bg-accent-orange' },
       { token: 'accent.green', value: '27B66A', className: 'bg-accent-green' },
       { token: 'accent.blue', value: '0088FF', className: 'bg-accent-blue' },
+      { token: 'accent.indigo', value: '7080FF', className: 'bg-accent-indigo' },
+      { token: 'accent.violet', value: '966CFF', className: 'bg-accent-violet' },
+      { token: 'accent.magenta', value: 'CC3380', className: 'bg-accent-magenta' },
       { token: 'accent.teal', value: '146666', className: 'bg-accent-teal' },
     ],
   },
@@ -1104,7 +1107,7 @@ export function DesignSystemPage() {
           index="12"
           name="Modal"
           title="模态弹窗"
-          description="Modal 按尺寸档沉淀模式控件：360 InfoModal、480 ConfirmModal / FormModal、640 FeatureModal、720 ContentModal、960 WorkflowModal。最大高度按窗口上下各 40px 安全间距限制，内容超出时只滚动 Body，Header / Footer 保持可见。"
+          description="Modal 按尺寸档沉淀模式控件：360 InfoModal、480 ConfirmModal / FormModal、640 FeatureModal、720 ContentModal、960 WorkflowModal。最大高度按窗口上下各 40px 安全间距限制；默认只滚动 Body，固定外壳分栏可用 bodyScroll='none' 后由内部面板滚动。"
         >
           <div className="grid gap-1">
             <Row label="360 / InfoModal">
@@ -1158,6 +1161,11 @@ export function DesignSystemPage() {
             <Row label="Max height">
               <p className="text-sm leading-5 text-text-secondary">
                 `calc(100vh - 80px)`，上下最小间距 40px，超出内容在 Body 内部滚动。
+              </p>
+            </Row>
+            <Row label="Fixed shell">
+              <p className="text-sm leading-5 text-text-secondary">
+                分栏、支付、配置向导使用 `bodyScroll="none"`，关闭按钮、底图、侧栏底色固定，滚动层放在具体内容面板内部。
               </p>
             </Row>
           </div>
@@ -1251,20 +1259,37 @@ export function DesignSystemPage() {
           title="复杂流程"
           panelClassName="h-[560px]"
           bodyPadding={false}
+          bodyScroll="none"
           onClose={() => setActiveModalPreview(null)}
         >
-          <div className="flex h-full min-h-0">
-            <div className="min-w-0 flex-1 p-8">
-              <div className="grid grid-cols-3 gap-3">
-                {[1, 2, 3, 4, 5, 6].map((item) => (
-                  <div key={item} className="rounded-button bg-bg-soft p-4 text-sm">
-                    流程选项 {item}
-                  </div>
-                ))}
+          <div className="flex h-full min-h-0 overflow-hidden">
+            <div className="relative h-full min-w-0 flex-1 overflow-hidden">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-bg-soft" />
+              <div className="relative h-full overflow-y-auto p-8">
+                <div className="grid grid-cols-3 gap-3">
+                  {Array.from({ length: 12 }, (_, index) => (
+                    <div
+                      key={index + 1}
+                      className="rounded-button bg-bg-soft p-4 text-sm leading-5 text-text-secondary"
+                    >
+                      流程选项 {index + 1}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-            <aside className="w-[280px] shrink-0 bg-bg-soft p-8 text-sm leading-5 text-text-secondary">
-              右侧区域可承载支付、摘要、步骤状态或结果预览。
+            <aside className="h-full w-[280px] shrink-0 overflow-hidden bg-bg-soft">
+              <div className="h-full overflow-y-auto px-8 py-8">
+                <div className="flex min-h-full flex-col justify-center gap-3 text-sm leading-5 text-text-secondary">
+                  <p className="text-text-primary">固定侧栏</p>
+                  <p>侧栏底色不滚动，只滚动内部摘要、支付、步骤状态或结果预览。</p>
+                  {Array.from({ length: 6 }, (_, index) => (
+                    <div key={index + 1} className="rounded-button bg-bg-white p-3">
+                      摘要 {index + 1}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </aside>
           </div>
         </WorkflowModal>

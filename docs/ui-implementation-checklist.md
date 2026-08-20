@@ -37,6 +37,7 @@
 - 模态弹窗优先使用已封装控件：`InfoModal`、`ConfirmModal`、`FormModal`、`FeatureModal`、`ContentModal`、`WorkflowModal`；复杂业务弹窗可作为对应模式下的业务实例，但底层必须复用 `Modal`。
 - 新增模态弹窗时先判断尺寸档，再判断模式：`360 InfoModal`、`480 ConfirmModal / FormModal`、`640 FeatureModal`、`720 ContentModal`、`960 WorkflowModal`。
 - 模态弹窗最大高度统一按窗口上下各 `40px` 安全间距限制；内容超出时只滚动 Body，Header/Footer 不参与滚动。
+- 分栏、支付、配置向导等固定外壳弹窗使用 `Modal bodyScroll="none"`；关闭按钮、底图、侧栏底色不参与滚动，只允许具体内容面板内部滚动。
 - 弹窗遮罩关闭必须判断按下和释放都在遮罩上；从弹窗内容区按下后拖出释放，不得关闭弹窗。
 - 新增或修改封装控件时，必须同步更新 `src/pages/DesignSystemPage.tsx` 设计规范实时预览页。
 - 设计规范实时预览页只负责排列和说明，必须直接引用封装控件，不得覆盖控件本身样式。

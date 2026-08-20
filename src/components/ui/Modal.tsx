@@ -6,6 +6,7 @@ import type { ButtonVariant } from './buttonStyles';
 export type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl';
 
 type ModalOverlayTone = 'standard' | 'light' | 'medium';
+type ModalBodyScroll = 'body' | 'none';
 
 type ModalProps = {
   open?: boolean;
@@ -20,6 +21,7 @@ type ModalProps = {
   ariaLabel?: string;
   ariaLabelledBy?: string;
   overlayTone?: ModalOverlayTone;
+  bodyScroll?: ModalBodyScroll;
   panelClassName?: string;
   bodyClassName?: string;
   headerClassName?: string;
@@ -95,6 +97,7 @@ export function Modal({
   ariaLabel,
   ariaLabelledBy,
   overlayTone = 'standard',
+  bodyScroll = 'body',
   panelClassName,
   bodyClassName,
   headerClassName,
@@ -234,7 +237,8 @@ export function Modal({
 
         <div
           className={mergeClassNames(
-            'min-h-0 flex-1 overflow-y-auto',
+            'min-h-0 flex-1',
+            bodyScroll === 'body' ? 'overflow-y-auto' : 'overflow-hidden',
             bodyPadding && 'px-6 py-4',
             bodyClassName,
           )}

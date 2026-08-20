@@ -106,8 +106,13 @@
 | Token | Color | Usage |
 | --- | --- | --- |
 | `accent.success` | `#219B5A` | 成功、进行中等状态文字 |
+| `accent.red` | `#FF5C4D` | 红色功能色、强调色 |
+| `accent.orange` | `#FF922B` | 橙色功能色、充值和提示强调 |
 | `accent.green` | `#27B66A` | 成功、进行中等状态描边 |
 | `accent.blue` | `#0088FF` | 云空间、蓝色功能提示 |
+| `accent.indigo` | `#7080FF` | 企业默认头像等辅助功能色 |
+| `accent.violet` | `#966CFF` | 企业默认头像等辅助功能色 |
+| `accent.magenta` | `#CC3380` | 企业默认头像等辅助功能色 |
 
 ### 3.5 执行规则
 
@@ -504,7 +509,9 @@ Modal 用于需要阻断当前页面操作、要求用户完成阅读、确认�
 
 移动端或窄屏时，弹窗宽度使用 `min(tokenWidth, calc(100vw - 48px))`。
 
-弹窗最大高度统一使用 `calc(100vh - 80px)`，即距离窗口顶部和底部最小保留 `40px`。内容超出时只滚动 Body 内容区，Header、Footer、关闭按钮和底部操作区必须保持可见。
+弹窗最大高度统一使用 `calc(100vh - 80px)`，即距离窗口顶部和底部最小保留 `40px`。默认内容超出时只滚动 Body 内容区，Header、Footer、关闭按钮和底部操作区必须保持可见。
+
+分栏、支付、配置向导等需要固定背景、固定侧栏底色或固定右上关闭按钮的复杂弹窗，必须使用 `Modal bodyScroll="none"` 保持弹窗外壳不滚动，再由左右面板或业务内容区各自设置内部滚动。不可让关闭按钮、底图、背景底色、固定侧栏随内容一起滚动。
 
 ### 9.3 通用结构
 
@@ -515,7 +522,7 @@ Modal 用于需要阻断当前页面操作、要求用户完成阅读、确认�
 | Header | 标题 + 右侧关闭按钮，标准内边距 `pl-6 pr-4 pt-4 pb-2` |
 | Title | `16px / 24px`，`font-medium` |
 | Close Button | `ModalCloseButton`，`32px × 32px`，使用 `Icon name="X"` |
-| Body | 默认 `px-6 py-4`，内容超高时内部滚动；复杂业务可关闭默认内边距 |
+| Body | 默认 `px-6 py-4`，`bodyScroll="body"` 时内容超高在 Body 内滚动；复杂固定外壳弹窗使用 `bodyScroll="none"` |
 | Footer | 默认 `px-6 pt-4 pb-6`，右对齐 |
 | Footer Button | 默认使用 `Button size="lg"` |
 
@@ -524,6 +531,7 @@ Modal 用于需要阻断当前页面操作、要求用户完成阅读、确认�
 - `FormModal` 固定为标题、表单内容、取消按钮、确认按钮；内容区不限制字段数量。
 - `FeatureModal`、`ContentModal`、`WorkflowModal` 可以承载业务自定义内容，但仍必须复用统一 Modal 行为。
 - 业务弹窗如 `LoginModal`、`RechargeModal` 不直接变成通用控件，应作为对应模式下的业务实例。
+- `WorkflowModal` 若包含固定底图、固定背景侧栏、支付二维码区等分栏结构，弹窗 Body 不参与滚动；滚动层必须放在具体内容面板内部。
 - 弹窗右上角关闭按钮统一使用 `ModalCloseButton`；`X` 的视觉描边按弹窗规范保持一致；灰底区域使用 `surface="soft"`。
 - 点击遮罩关闭仅在鼠标按下和释放都发生在遮罩本身时触发；从弹窗内容区按下后拖到遮罩释放，不关闭弹窗。
 

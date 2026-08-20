@@ -22,6 +22,7 @@ export type MockAccount = {
   id: string;
   name: string;
   type: MockAccountType;
+  avatarSrc?: string;
   enterpriseRole?: MockEnterpriseRole;
   status: string;
   balance: string;
@@ -272,6 +273,26 @@ export function updateMockAccountName(
     ...accountData,
     accounts: accountData.accounts.map((account) =>
       account.id === accountId ? { ...account, name } : account,
+    ),
+  });
+}
+
+export function updateMockAccountAvatar(
+  user: MockUser | null,
+  seededAccountData: MockAccountData,
+  accountId: string,
+  avatarSrc: string,
+) {
+  if (user === null) {
+    return getMockAccountData(user, seededAccountData);
+  }
+
+  const accountData = getMockAccountData(user, seededAccountData);
+
+  return saveMockAccountData(user.id, {
+    ...accountData,
+    accounts: accountData.accounts.map((account) =>
+      account.id === accountId ? { ...account, avatarSrc } : account,
     ),
   });
 }
