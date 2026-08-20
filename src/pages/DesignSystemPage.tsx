@@ -1104,7 +1104,7 @@ export function DesignSystemPage() {
           index="12"
           name="Modal"
           title="模态弹窗"
-          description="Modal 按尺寸档沉淀模式控件：360 InfoModal、480 ConfirmModal / FormModal、640 FeatureModal、720 ContentModal、960 WorkflowModal。最大高度按窗口上下各 80px 安全间距限制，内容超出时只滚动 Body，Header / Footer 保持可见。"
+          description="Modal 按尺寸档沉淀模式控件：360 InfoModal、480 ConfirmModal / FormModal、640 FeatureModal、720 ContentModal、960 WorkflowModal。最大高度按窗口上下各 40px 安全间距限制，内容超出时只滚动 Body，Header / Footer 保持可见。"
         >
           <div className="grid gap-1">
             <Row label="360 / InfoModal">
@@ -1157,7 +1157,7 @@ export function DesignSystemPage() {
             </Row>
             <Row label="Max height">
               <p className="text-sm leading-5 text-text-secondary">
-                `calc(100vh - 160px)`，上下最小间距 80px，超出内容在 Body 内部滚动。
+                `calc(100vh - 80px)`，上下最小间距 40px，超出内容在 Body 内部滚动。
               </p>
             </Row>
           </div>
@@ -1240,7 +1240,7 @@ export function DesignSystemPage() {
               内容区域应独立滚动，标题栏保持稳定。这里展示的是结构预览，业务页面可以在标题区放置 Tab 或其他内容导航。
             </p>
             <p>
-              当内容很长时，不要让整个页面滚动；只滚动弹窗 Body 内容区，避免关闭按钮和操作区域离开视野。Modal 容器最大高度统一保留窗口上下各 80px。
+              当内容很长时，不要让整个页面滚动；只滚动弹窗 Body 内容区，避免关闭按钮和操作区域离开视野。Modal 容器最大高度统一保留窗口上下各 40px。
             </p>
           </div>
         </ContentModal>

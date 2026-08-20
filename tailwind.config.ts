@@ -47,6 +47,11 @@ export default {
             hover: '#F28B29',
             active: '#E68327',
           },
+          agent: {
+            DEFAULT: 'rgb(20 102 102 / 0.08)',
+            hover: 'rgb(20 102 102 / 0.12)',
+            active: 'rgb(20 102 102 / 0.16)',
+          },
         },
         accent: {
           warningSoft: '#FFE5CC',

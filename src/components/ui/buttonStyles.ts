@@ -1,4 +1,10 @@
-export type ButtonVariant = 'primary' | 'secondary' | 'text' | 'warning' | 'notice';
+export type ButtonVariant =
+  | 'primary'
+  | 'secondary'
+  | 'text'
+  | 'warning'
+  | 'notice'
+  | 'agent';
 export type ButtonSize = 'xl' | 'lg' | 'md' | 'sm' | 'xs';
 export type ButtonSurface = 'white' | 'soft';
 export type ButtonShape = 'default' | 'pill';
@@ -25,13 +31,18 @@ const shapeClassNames: Record<ButtonShape, string> = {
   pill: 'rounded-pill',
 };
 
-const filledVariantClassNames: Record<Extract<ButtonVariant, 'primary' | 'warning' | 'notice'>, string> = {
+const filledVariantClassNames: Record<
+  Extract<ButtonVariant, 'primary' | 'warning' | 'notice' | 'agent'>,
+  string
+> = {
   primary:
     'bg-button-primary text-text-inverse hover:bg-button-primary-hover active:bg-button-primary-active disabled:bg-transparent disabled:text-text-disabled disabled:shadow-border-strong',
   warning:
     'bg-button-warning text-text-inverse hover:bg-button-warning-hover active:bg-button-warning-active disabled:bg-transparent disabled:text-text-disabled disabled:shadow-border-strong',
   notice:
     'bg-button-notice text-text-inverse hover:bg-button-notice-hover active:bg-button-notice-active disabled:bg-transparent disabled:text-text-disabled disabled:shadow-border-strong',
+  agent:
+    'bg-button-agent text-accent-teal hover:bg-button-agent-hover active:bg-button-agent-active disabled:bg-transparent disabled:text-text-disabled',
 };
 
 const surfaceVariantClassNames: Record<

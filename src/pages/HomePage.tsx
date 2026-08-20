@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ChangeEvent, ReactNode, Ref, RefObject } from 'react';
 import {
   defaultProfileNickname,
@@ -1879,6 +1879,66 @@ const aiWorkstationPairingSteps = [
   },
 ] as const;
 
+const customAgentSceneCards: Array<{
+  icon: IconName;
+  label: string;
+}> = [
+  { icon: 'LibraryBig', label: '企业知识库问答与内部助手' },
+  { icon: 'Headset', label: '客服、销售及售前咨询' },
+  { icon: 'PencilSparkles', label: '内容创作、审核与批量生成' },
+  { icon: 'Users', label: '招聘、面试及员工培训' },
+  { icon: 'ReceiptText', label: '报告、合同、方案等文档处理' },
+  { icon: 'ListChecks', label: '数据分析、业务流程自动化' },
+];
+
+const customAgentCapabilities: Array<{
+  icon: IconName;
+  label: string;
+}> = [
+  { icon: 'Zap', label: '智能体功能与交互设计' },
+  { icon: 'LibraryBig', label: '企业知识库接入' },
+  { icon: 'Columns3Cog', label: '专属提示词与业务规则配置' },
+  { icon: 'GitBranchPlus', label: '工作流程及工具调用设计' },
+  { icon: 'Laptop', label: '本地模型或私有化部署方案' },
+  { icon: 'BadgeCheck', label: '上线后的调试与优化支持' },
+];
+
+const customAgentServiceSteps = [
+  {
+    index: '1',
+    title: '需求沟通',
+    description: '明确业务目标与需求',
+  },
+  {
+    index: '2',
+    title: '方案评估',
+    description: '制定适合的实施方案',
+  },
+  {
+    index: '3',
+    title: '智能体配置',
+    description: '完成智能体能力搭建',
+  },
+  {
+    index: '4',
+    title: '测试验收',
+    description: '测试效果并优化调整',
+  },
+  {
+    index: '5',
+    title: '正式上线',
+    description: '部署交付并投入使用',
+  },
+] as const;
+
+const customAgentDeploymentOptions = [
+  '暂不需求',
+  '有此需求，想了解方案',
+  '暂不确定，希望获得建议',
+] as const;
+
+type CustomAgentErrorField = 'requirement' | 'contact' | null;
+
 function AiWorkstationConnectionModal({
   status,
   currentUser,
@@ -1935,7 +1995,7 @@ function AiWorkstationConnectionModal({
           </div>
         </div>
 
-        <section className="relative flex h-full min-w-0 flex-1 flex-col items-start gap-6 px-12 py-10">
+        <section className="scrollbar-none relative flex h-full min-w-0 flex-1 flex-col items-start gap-6 overflow-y-auto overflow-x-hidden px-12 py-10">
           <div
             className="relative z-10 h-12 w-[45px] shrink-0"
             data-name="hermes-logo 4"
@@ -2080,7 +2140,7 @@ function AiWorkstationConnectionModal({
 
         <aside className="relative flex h-full w-[360px] shrink-0 items-center py-2 pr-2">
           <div
-            className="flex h-full min-w-0 flex-1 flex-col items-center overflow-hidden rounded-lg bg-bg-soft px-8 py-6"
+            className="scrollbar-none flex h-full min-w-0 flex-1 flex-col items-center overflow-y-auto overflow-x-hidden rounded-lg bg-bg-soft px-8 py-6"
             data-name="Panel"
           >
             {status === 'not-installed' ? (
@@ -2181,7 +2241,7 @@ function AiWorkstationRightDivider({ inset }: { inset: 'wide' | 'none' }) {
 function AiWorkstationUninstalledPanelContent() {
   return (
     <div
-      className="relative flex min-h-0 w-full flex-1 flex-col items-center"
+      className="relative flex min-h-max w-full flex-1 flex-col items-center"
       data-name="Content"
     >
       <AiWorkstationRightHeader
@@ -2228,7 +2288,7 @@ function AiWorkstationNotConnectedPanelContent({
 }) {
   return (
     <div
-      className="relative flex min-h-0 w-full flex-1 flex-col items-center"
+      className="relative flex min-h-max w-full flex-1 flex-col items-center"
       data-name="Content"
     >
       <AiWorkstationRightHeader
@@ -2365,7 +2425,7 @@ function AiWorkstationConnectedPanelContent({
 
   return (
     <div
-      className="relative flex min-h-0 w-full flex-1 flex-col items-center"
+      className="relative flex min-h-max w-full flex-1 flex-col items-center"
       data-name="Content"
     >
       <AiWorkstationRightHeader
@@ -2473,6 +2533,374 @@ function AiWorkstationConnectedPanelContent({
         ))}
       </div>
     </div>
+  );
+}
+
+function ProjectDetailCheckboxMark({
+  checked,
+  indeterminate = false,
+  alwaysVisible = true,
+}: {
+  checked: boolean;
+  indeterminate?: boolean;
+  alwaysVisible?: boolean;
+}) {
+  return (
+    <span
+      className={[
+        'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-border-default text-text-primary transition-[opacity,background-color]',
+        checked || indeterminate ? 'bg-bg-medium' : 'bg-transparent',
+        alwaysVisible || checked || indeterminate
+          ? 'opacity-100'
+          : 'opacity-0 group-hover/project-file-row:opacity-100',
+      ].join(' ')}
+      aria-hidden="true"
+    >
+      {checked && <Icon name="Check" size="xs" strokeWidth={3} />}
+      {indeterminate && !checked && (
+        <Icon name="Minus" size="xs" strokeWidth={3} />
+      )}
+    </span>
+  );
+}
+
+function CustomAgentModal({ onClose }: { onClose: () => void }) {
+  const [requirement, setRequirement] = useState('');
+  const [contact, setContact] = useState('');
+  const [contactName, setContactName] = useState('');
+  const [teamName, setTeamName] = useState('');
+  const [selectedDeploymentOption, setSelectedDeploymentOption] = useState<
+    number | null
+  >(null);
+  const [errorField, setErrorField] = useState<CustomAgentErrorField>(null);
+
+  const hasRequirementError = errorField === 'requirement';
+  const hasContactError = errorField === 'contact';
+  const textareaFrameClassName = [
+    'flex h-[108px] w-full shrink-0 flex-col items-start justify-center gap-2 rounded-button px-4 py-3 transition-shadow',
+    hasRequirementError
+      ? 'shadow-border-error'
+      : 'shadow-border-strong hover:shadow-border-hover focus-within:!shadow-border-selected',
+  ].join(' ');
+
+  function handleSubmitCustomAgentRequest() {
+    if (requirement.trim().length === 0) {
+      setErrorField('requirement');
+      return;
+    }
+
+    if (contact.trim().length === 0) {
+      setErrorField('contact');
+      return;
+    }
+
+    setErrorField(null);
+  }
+
+  return (
+    <Modal
+      size="md"
+      ariaLabel="定制智能体需求"
+      showCloseButton={false}
+      bodyPadding={false}
+      panelClassName="relative h-[800px] !w-[960px] p-0 !shadow-ai-workstation-modal"
+      bodyClassName="h-full overflow-hidden"
+      header={({ close }) => (
+        <div
+          className="absolute right-0 top-0 z-20 flex h-14 w-14 items-start justify-end pb-2 pl-2 pr-4 pt-4"
+          data-name="Heading"
+        >
+          <ModalCloseButton
+            aria-label="关闭定制需求弹窗"
+            onClick={close}
+          />
+        </div>
+      )}
+      onClose={onClose}
+    >
+      <div className="relative flex h-full w-full items-start overflow-hidden">
+        <section
+          className="relative h-full min-w-0 flex-1 overflow-hidden text-text-inverse [container-type:size]"
+          data-name="Left Panel"
+        >
+          <div className="absolute inset-0 bg-bg-black" data-name="Cover Image">
+            <img
+              className="h-full w-full object-cover"
+              src="/assets/custom-agent/cover.png"
+              alt=""
+            />
+            <div className="absolute inset-0 bg-gradient-to-l from-bg-black/40 to-overlay-clear" />
+          </div>
+
+          <div className="scrollbar-none relative z-10 flex h-full w-full flex-col items-start gap-[clamp(24px,calc((100cqh-650px)/4),32px)] overflow-y-auto overflow-x-hidden px-16 py-10">
+            <Icon
+              name="PackagePlus"
+              size="2xl"
+              className="shrink-0"
+            />
+
+            <div
+              className="flex w-full shrink-0 flex-col items-start gap-2"
+              data-name="Heading"
+            >
+              <div className="flex w-full shrink-0 flex-col items-start">
+                <h2 className="w-full text-2xl font-semibold">
+                  定制专属智能体
+                </h2>
+              </div>
+              <div className="flex w-full shrink-0 items-start justify-center overflow-hidden">
+                <div className="min-w-0 flex-1 text-justify text-xs leading-4 text-text-inverse">
+                  <p>根据您的业务目标、工作流程和数据需求，打造专属AI智能体。</p>
+                  <p>
+                    定制智能体可以结合企业内部知识、业务规则和操作流程，为您提供更贴合实际工作的智能服务，帮助提升效率、统一标准，并减少重复性工作。
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="flex w-full shrink-0 flex-col items-start gap-2"
+            >
+              <div className="flex w-full shrink-0 items-center text-xs leading-4 text-text-inverse/60">
+                <p className="min-w-0 flex-1">适用场景</p>
+              </div>
+              <div
+                className="grid w-full shrink-0 grid-cols-3 gap-1"
+                data-name="Card Container"
+              >
+                {customAgentSceneCards.map((card) => (
+                  <div
+                    key={card.label}
+                    className="flex h-[52px] shrink-0 items-center gap-3 rounded-lg bg-overlay-white8 px-4 py-3"
+                    data-name="Card"
+                  >
+                    <Icon name={card.icon} size="sm" className="shrink-0 opacity-40" />
+                    <p className="w-[89px] shrink-0 text-label text-text-inverse">
+                      {card.label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div
+              className="flex w-full shrink-0 flex-col items-start gap-2"
+            >
+              <div className="flex w-full shrink-0 items-center text-xs leading-4 text-text-inverse/60">
+                <p className="min-w-0 flex-1">我们可以为您提供</p>
+              </div>
+              <div
+                className="flex w-full shrink-0 flex-col items-start rounded-lg py-1"
+                data-name="Card Container"
+              >
+                {customAgentCapabilities.map((capability, index) => (
+                  <div className="w-full" key={capability.label}>
+                    <div
+                      className="flex h-[26px] w-full shrink-0 items-center gap-3 rounded-lg py-1.5"
+                      data-name="Card"
+                    >
+                      <Icon name={capability.icon} size="sm" className="shrink-0 opacity-40" />
+                      <div className="flex min-w-0 flex-1 flex-col items-start justify-center">
+                        <p className="w-full text-label text-text-inverse">
+                          {capability.label}
+                        </p>
+                      </div>
+                    </div>
+                    {index < customAgentCapabilities.length - 1 && (
+                      <div className="flex h-2 w-full shrink-0 items-center">
+                        <div className="h-px w-full bg-overlay-white8" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div
+              className="flex w-full shrink-0 flex-col items-center gap-2"
+              data-name="QA"
+            >
+              <div className="flex w-full shrink-0 items-center text-xs leading-4 text-text-inverse/60">
+                <p className="min-w-0 flex-1">服务流程</p>
+              </div>
+              <div
+                className="flex h-[66px] w-full shrink-0 items-center"
+                data-name="List"
+              >
+                {customAgentServiceSteps.map((step, index) => (
+                  <Fragment key={step.index}>
+                    <div
+                      className="flex h-full min-w-0 flex-1 flex-col items-start gap-1"
+                      data-name="List Item"
+                    >
+                      <p className="w-full text-xs leading-4 text-text-inverse/40">
+                        {step.index}
+                      </p>
+                      <p className="w-full text-label text-text-inverse">
+                        {step.title}
+                      </p>
+                      <p className="w-full text-label text-text-inverse/40">
+                        {step.description}
+                      </p>
+                    </div>
+                    {index < customAgentServiceSteps.length - 1 && (
+                      <div className="relative h-full w-8 shrink-0">
+                        <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-overlay-white8" />
+                      </div>
+                    )}
+                  </Fragment>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside
+          className="flex h-full w-96 shrink-0 flex-col items-start overflow-hidden bg-bg-white"
+          data-name="Login Panel"
+        >
+          <div
+            className="flex w-full shrink-0 flex-col items-start px-8 pb-2 pt-10"
+            data-name="Sticky Header"
+          >
+            <div className="flex w-full shrink-0 items-center justify-center">
+              <h2 className="min-w-0 flex-1 text-base font-medium leading-6 text-text-primary">
+                定制需求
+              </h2>
+            </div>
+          </div>
+
+          <div
+            className="flex min-h-0 w-full flex-1 flex-col items-start gap-6 overflow-y-auto overflow-x-hidden px-8 pb-2 pt-6"
+            data-name="Form"
+          >
+            <div className="flex w-full shrink-0 flex-col items-start gap-2">
+              <label className="flex w-full shrink-0 items-center gap-0.5 whitespace-nowrap text-sm leading-5">
+                <span className="text-text-danger">*</span>
+                <span className="text-text-primary">需求场景</span>
+              </label>
+              <div className={textareaFrameClassName}>
+                <textarea
+                  className="scrollbar-none min-h-0 w-full flex-1 resize-none overflow-y-auto bg-transparent text-sm leading-5 text-text-primary placeholder:text-text-placeholder focus:outline-none"
+                  maxLength={200}
+                  placeholder="例如：希望搭建企业内部知识库问答助手，能够根据公司资料回答员工问题"
+                  value={requirement}
+                  onChange={(event) => {
+                    const nextRequirement = event.target.value;
+                    setRequirement(nextRequirement);
+                    if (errorField === 'requirement' && nextRequirement.trim().length > 0) {
+                      setErrorField(null);
+                    }
+                  }}
+                />
+                <p className="w-full text-right text-xs leading-4 text-text-placeholder">
+                  {requirement.length}/200
+                </p>
+              </div>
+              {hasRequirementError && (
+                <div className="flex w-full items-center gap-1 text-accent-error">
+                  <Icon name="CircleAlert" size="2xs" className="shrink-0" />
+                  <p className="min-w-0 flex-1 text-xs leading-4">
+                    请输入需求场景
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex w-full shrink-0 flex-col items-start gap-2">
+              <label className="flex w-full shrink-0 items-center gap-0.5 whitespace-nowrap text-sm leading-5">
+                <span className="text-text-danger">*</span>
+                <span className="text-text-primary">联系电话</span>
+              </label>
+              <InputField
+                className="w-full shrink-0"
+                error={hasContactError}
+                placeholder="请输入手机号或其他有效联系方式"
+                value={contact}
+                onValueChange={(nextContact) => {
+                  setContact(nextContact);
+                  if (errorField === 'contact' && nextContact.trim().length > 0) {
+                    setErrorField(null);
+                  }
+                }}
+              />
+              {hasContactError && (
+                <div className="flex w-full items-center gap-1 text-accent-error">
+                  <Icon name="CircleAlert" size="2xs" className="shrink-0" />
+                  <p className="min-w-0 flex-1 text-xs leading-4">
+                    请输入联系电话
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex w-full shrink-0 flex-col items-start gap-2">
+              <label className="flex w-full shrink-0 items-center text-sm leading-5 text-text-primary">
+                联系人称呼
+              </label>
+              <InputField
+                className="w-full shrink-0"
+                placeholder="请输入您的称呼"
+                value={contactName}
+                onValueChange={setContactName}
+              />
+            </div>
+
+            <div className="flex w-full shrink-0 flex-col items-start gap-2">
+              <label className="flex w-full shrink-0 items-center text-sm leading-5 text-text-primary">
+                企业/团队名称
+              </label>
+              <InputField
+                className="w-full shrink-0"
+                placeholder="请输入企业或团队名称"
+                value={teamName}
+                onValueChange={setTeamName}
+              />
+            </div>
+
+            <div className="flex w-full shrink-0 flex-col items-start gap-3">
+              <p className="flex w-full shrink-0 items-center whitespace-nowrap text-sm leading-5 text-text-primary">
+                是否需要本地大模型或私有化部署？
+              </p>
+              <div className="flex w-full shrink-0 flex-col items-start justify-center gap-2">
+                {customAgentDeploymentOptions.map((option, index) => (
+                  <button
+                    key={option}
+                    className="flex w-full shrink-0 items-center gap-2 text-left"
+                    type="button"
+                    onClick={() => setSelectedDeploymentOption(index)}
+                  >
+                    <ProjectDetailCheckboxMark
+                      checked={selectedDeploymentOption === index}
+                    />
+                    <span className="min-w-0 flex-1 text-sm leading-5 text-text-primary">
+                      {option}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex w-full shrink-0 flex-col items-start gap-3 px-8 pb-8 pt-2">
+            <Button
+              variant="primary"
+              size="lg"
+              fullWidth
+              type="button"
+              onClick={handleSubmitCustomAgentRequest}
+            >
+              提交需求
+            </Button>
+            <div className="flex w-full shrink-0 items-center overflow-hidden px-10">
+              <p className="min-w-0 flex-1 text-center text-xs leading-4 text-text-hint">
+                我们将仅使用您提交的信息与您沟通定制需求，不会用于其他用途。
+              </p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </Modal>
   );
 }
 
@@ -3268,6 +3696,7 @@ function TitleBar({
   messageUnreadCount,
   messageUnreadCounts,
   onMessageModeChange,
+  onCustomAgentClick,
   onRechargeClick,
   notificationOpen,
   onNotificationToggle,
@@ -3310,6 +3739,7 @@ function TitleBar({
   messageUnreadCount: number;
   messageUnreadCounts: MessageUnreadCounts;
   onMessageModeChange: (value: MessageMode) => void;
+  onCustomAgentClick: () => void;
   onRechargeClick: () => void;
   notificationOpen: boolean;
   onNotificationToggle: () => void;
@@ -3432,10 +3862,7 @@ function TitleBar({
         </div>
       </div>
       <div
-        className={[
-          'flex h-14 items-center',
-          isLoggedIn ? 'w-[184px]' : '',
-        ].join(' ')}
+        className="flex h-14 items-center"
       >
         <div className="flex h-14 items-center gap-3 px-1">
           <div ref={notificationTriggerRef} className="relative h-8 w-8 shrink-0">
@@ -3481,7 +3908,17 @@ function TitleBar({
             />
           )}
           <Button
-            className="w-[90px] whitespace-nowrap px-3.5 pr-4"
+            className="whitespace-nowrap"
+            variant="agent"
+            size="md"
+            shape="pill"
+            icon="PackagePlus"
+            onClick={onCustomAgentClick}
+          >
+            定制智能体
+          </Button>
+          <Button
+            className="whitespace-nowrap"
             variant="notice"
             size="md"
             shape="pill"
@@ -6137,11 +6574,8 @@ function ProjectDetailFileCheckbox({
   return (
     <button
       className={[
-        'flex h-4 w-4 shrink-0 items-center justify-center rounded border border-border-default text-text-primary transition-[opacity,background-color]',
-        checked || indeterminate ? 'bg-bg-medium' : 'bg-transparent',
-        alwaysVisible || checked || indeterminate
-          ? 'opacity-100'
-          : 'opacity-0 group-hover/project-file-row:opacity-100',
+        'flex h-4 w-4 shrink-0 items-center justify-center',
+        alwaysVisible || checked || indeterminate ? 'opacity-100' : 'opacity-0 group-hover/project-file-row:opacity-100',
       ].join(' ')}
       type="button"
       aria-label={label}
@@ -6155,10 +6589,11 @@ function ProjectDetailFileCheckbox({
         onToggle();
       }}
     >
-      {checked && <Icon name="Check" size="xs" strokeWidth={3} />}
-      {indeterminate && !checked && (
-        <Icon name="Minus" size="xs" strokeWidth={3} />
-      )}
+      <ProjectDetailCheckboxMark
+        checked={checked}
+        indeterminate={indeterminate}
+        alwaysVisible
+      />
     </button>
   );
 }
@@ -7474,6 +7909,7 @@ export function HomePage() {
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
+  const [isCustomAgentModalOpen, setIsCustomAgentModalOpen] = useState(false);
   const [isAiWorkstationModalOpen, setIsAiWorkstationModalOpen] =
     useState(false);
   const [selectedAgentDetail, setSelectedAgentDetail] =
@@ -7737,6 +8173,7 @@ export function HomePage() {
     isInvoiceModalOpen ||
     isSupportModalOpen ||
     isRechargeModalOpen ||
+    isCustomAgentModalOpen ||
     isAiWorkstationModalOpen ||
     isLoginModalOpen ||
     isLoginAccountSelectionModalOpen ||
@@ -8688,6 +9125,7 @@ export function HomePage() {
           messageUnreadCount={visibleMessageUnreadCount}
           messageUnreadCounts={visibleMessageUnreadCounts}
           onMessageModeChange={handleMessageModeChange}
+          onCustomAgentClick={() => setIsCustomAgentModalOpen(true)}
           onRechargeClick={handleRechargeClick}
           notificationOpen={isNotificationPopoverOpen}
           onNotificationToggle={() =>
@@ -8851,6 +9289,9 @@ export function HomePage() {
       )}
       {isRechargeModalOpen && (
         <RechargeModal onClose={() => setIsRechargeModalOpen(false)} />
+      )}
+      {isCustomAgentModalOpen && (
+        <CustomAgentModal onClose={() => setIsCustomAgentModalOpen(false)} />
       )}
       {isAiWorkstationModalOpen && (
         <AiWorkstationConnectionModal

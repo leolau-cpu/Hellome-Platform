@@ -36,7 +36,7 @@
 - Tooltip 提示气泡必须使用已封装的 `Tooltip` 控件；气泡最大宽度 `320px`、最大高度 `172px` 不含箭头，触发件间距 `2px`，上下安全间距 `48px`，左右防出屏间距 `8px`。
 - 模态弹窗优先使用已封装控件：`InfoModal`、`ConfirmModal`、`FormModal`、`FeatureModal`、`ContentModal`、`WorkflowModal`；复杂业务弹窗可作为对应模式下的业务实例，但底层必须复用 `Modal`。
 - 新增模态弹窗时先判断尺寸档，再判断模式：`360 InfoModal`、`480 ConfirmModal / FormModal`、`640 FeatureModal`、`720 ContentModal`、`960 WorkflowModal`。
-- 模态弹窗最大高度统一按窗口上下各 `80px` 安全间距限制；内容超出时只滚动 Body，Header/Footer 不参与滚动。
+- 模态弹窗最大高度统一按窗口上下各 `40px` 安全间距限制；内容超出时只滚动 Body，Header/Footer 不参与滚动。
 - 弹窗遮罩关闭必须判断按下和释放都在遮罩上；从弹窗内容区按下后拖出释放，不得关闭弹窗。
 - 新增或修改封装控件时，必须同步更新 `src/pages/DesignSystemPage.tsx` 设计规范实时预览页。
 - 设计规范实时预览页只负责排列和说明，必须直接引用封装控件，不得覆盖控件本身样式。
