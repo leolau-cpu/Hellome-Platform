@@ -67,6 +67,8 @@ export default {
           magenta: '#CC3380',
           link: '#0074D9',
           linkBlueActive: '#004E91',
+          commentReply: '#003D73',
+          commentReplyHover: '#0061B5',
           linkRedActive: '#91342C',
           linkYellow: '#D97C25',
           linkYellowHover: '#FFA651',

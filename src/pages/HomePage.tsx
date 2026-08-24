@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, ChangeEvent, ReactNode, Ref, RefObject } from 'react';
+import type { CSSProperties, ChangeEvent, MouseEvent, ReactNode, Ref, RefObject } from 'react';
 import {
   defaultProfileNickname,
   getCurrentMockUser,
@@ -50,6 +50,17 @@ import {
   type MockRequestBillingDetail,
 } from '../api/mock/mockAccountApi';
 import {
+  addMockAgentComment,
+  addMockAgentReply,
+  getMockAgentDetailData,
+  resetMockAgentAccountState,
+  toggleMockAgentCommentLike,
+  toggleMockAgentReaction,
+  type MockAgentAuthorInput,
+  type MockAgentCommentItem,
+  type MockAgentStatName,
+} from '../api/mock/mockAgentApi';
+import {
   Button,
   IconButton,
   ModalCloseButton,
@@ -59,7 +70,6 @@ import { Icon, SortChevronsIcon } from '../components/ui/Icon';
 import { CounterInput, InputField } from '../components/ui/Input';
 import {
   ConfirmModal,
-  ContentModal,
   FormModal,
   InfoModal,
   Modal,
@@ -285,47 +295,137 @@ const heroBanners = [
 
 const cards = [
   {
+    id: 'hz-canvas',
+    title: 'Hz Canvas无限画布',
+    detailSubtitle: '图像与音视频',
+    description:
+      'Hz Canvas 是一个把无限画布、素材标注和 AI 视频生成整合在一起的本地图片视频创作工具。',
+    image: '/assets/home/agents/card-1.png',
+  },
+  {
+    id: 'moneyprinterturbo-local-hermes',
+    title: '快速混剪视频工具',
+    detailSubtitle: '图像与音视频',
+    description: '把一段想法、一篇文案或几段本地视频素材，快速制作成可发布的短视频。',
+    image: '/assets/home/agents/card-2.png',
+  },
+  {
+    id: 'geo-ops-workbench',
+    title: 'GEO助手',
+    detailSubtitle: '文本创作',
+    description: '一款帮助品牌生成关键词、检测 AI 可见度并创作 GEO 文章的智能运营工具。',
+    image: '/assets/home/agents/card-3.png',
+  },
+  {
+    id: 'hellome-jiuji-wenshu',
+    title: '救急文书工坊',
+    detailSubtitle: '文本创作',
+    description:
+      '基于 AI 大模型的智能文书工具，支持一键生成请示、报告、通知、总结等常用文书，帮助你快速完成规范、清晰的文案撰写。',
+    image: '/assets/home/agents/card-4.png',
+  },
+  {
+    id: 'world-monitor-workspace',
+    title: '全球新闻实时雷达',
+    detailSubtitle: '效率工具',
+    description: '实时汇聚全球新闻、官方信息源、市场行情和地图态势，帮助你快速掌握正在发生的重要事件。',
+    image: '/assets/home/agents/card-5.png',
+  },
+  {
+    id: 'linggan-xiezuotai',
+    title: '小说灵感写作台',
+    detailSubtitle: '文本创作',
+    description: '让每个人都能轻松记录想法、完善文字，写出自己的好文章。',
+    image: '/assets/home/agents/card-6.png',
+  },
+  {
+    id: 'careerkit-workspace',
+    title: '求职小助手',
+    detailSubtitle: '办公协同',
+    description:
+      '一款 AI 求职工作台，支持简历优化、JD 匹配、模拟面试和投递跟进，帮助你更高效地拿到心仪 Offer。',
+    image: '/assets/home/agents/card-7.png',
+  },
+  {
+    id: 'wechat-article-agent-local-hermes',
+    title: '公众号文章一键排版',
+    detailSubtitle: '文本创作',
+    description:
+      '输入一个主题，它会自动抓取相关资讯，生成文章、配图和排版内容，并可将成品保存到公众号草稿箱，减少查资料、写文章和排版的时间。',
+    image: '/assets/home/agents/card-8.png',
+  },
+  {
+    id: 'stirling-pdf-lite',
+    title: '轻量PDF小工具',
+    detailSubtitle: '效率工具',
+    description: '快速完成 PDF 合并、页面提取与旋转，让文件整理更高效。',
+    image: '/assets/home/agents/card-9.png',
+  },
+  {
+    id: 'image-compressor-local',
+    title: '图片压缩小工具',
+    detailSubtitle: '效率工具',
+    description: '一个无需登录的在线图片压缩工具：上传 JPG、PNG 等图片后，可调节质量并保持原格式下载。',
+    image: '/assets/home/agents/card-10.png',
+  },
+  {
+    id: 'stock-analysis-hub-local-hermes',
+    title: '股票交易分析工具',
+    detailSubtitle: '数据分析',
+    description: '帮助普通用户查询股票行情、查看技术指标、基本面、资金流向和龙虎榜信息。',
+    image: '/assets/home/agents/card-11.png',
+  },
+  {
+    id: 'acui-floating-window',
     title: 'ACUI桌面悬浮窗',
     description:
       '轻量级桌面展示技能，把客户的产品、数据或品牌内容悬浮在用户桌面右下角。',
     image: '/assets/home/card-acui.png',
   },
   {
+    id: 'airtable-data-manager',
     title: 'Airtable数据管理',
     description: '用 RESTAPI 操作 Airtable: 增删改查、筛选、更新插入。',
     image: '/assets/home/card-airtable.png',
   },
   {
+    id: 'apple-notes-manager',
     title: 'Apple备忘录',
     description: '用 memoCLI 管理 Apple 备忘录:创建、搜索、编辑。',
     image: '/assets/home/card-apple-notes.png',
   },
   {
+    id: 'apple-reminders-manager',
     title: 'Apple提醒事项',
     description: '用 remindctl 管理提醒事项:添加、列出、完成。',
     image: '/assets/home/card-reminders.png',
   },
   {
+    id: 'architecture-diagram-generator',
     title: '架构图生成',
     description: '生成深色 SVG 架构/云/基础设施图 (HTML)0',
     image: '/assets/home/card-architecture.png',
   },
   {
+    id: 'arxiv-paper-search',
     title: 'arXiv 论文检索',
     description: '按关键词/作者/分类/ ID 检索 arXiv 论文。',
     image: '/assets/home/card-arxiv.png',
   },
   {
+    id: 'ascii-art-generator',
     title: '字符画生成',
     description: '字符画: pyfiglet、cowsay、boxes、图片转字符。',
     image: '/assets/home/card-ascii.png',
   },
   {
+    id: 'ascii-video-generator',
     title: '字符视频生成',
     description: '字符视频:视频/音频转彩色字符 MP4/GIF。',
     image: '/assets/home/card-video.png',
   },
   {
+    id: 'audiocraft-audio-generator',
     title: 'AudioCraft音频生成',
     description: 'AudioCraft:MusicGen 文生音乐、AudioGen 文生音效。',
     image: '/assets/home/card-audiocraft.png',
@@ -333,6 +433,31 @@ const cards = [
 ];
 
 type AgentCardData = (typeof cards)[number];
+
+const hellomeOfficialAvatar = '/assets/agents/hellome-official-avatar.png';
+
+const agentCardAuthorsById: Record<string, { name: string; avatar: string }> = {
+  'hz-canvas': { name: 'HelloMe官方', avatar: hellomeOfficialAvatar },
+  'moneyprinterturbo-local-hermes': { name: 'HelloMe官方', avatar: hellomeOfficialAvatar },
+  'geo-ops-workbench': { name: 'Oliver', avatar: '/assets/home/workflows/avatar-1.png' },
+  'hellome-jiuji-wenshu': { name: 'Sophia', avatar: '/assets/home/workflows/avatar-2.png' },
+  'world-monitor-workspace': { name: 'Lucas', avatar: '/assets/home/workflows/avatar-3.png' },
+  'linggan-xiezuotai': { name: 'Emma', avatar: '/assets/home/workflows/avatar-4.png' },
+  'careerkit-workspace': { name: 'Ethan', avatar: '/assets/home/workflows/avatar-5.png' },
+  'wechat-article-agent-local-hermes': { name: 'Mia', avatar: '/assets/home/workflows/avatar-6.png' },
+  'stirling-pdf-lite': { name: 'Noah', avatar: '/assets/home/workflows/avatar-7.png' },
+  'image-compressor-local': { name: 'Ava', avatar: '/assets/home/workflows/avatar-8.png' },
+  'stock-analysis-hub-local-hermes': { name: 'Liam', avatar: '/assets/avatars/avatar-male-1.png' },
+  'acui-floating-window': { name: 'Garcia', avatar: '/assets/avatars/avatar-female-1.png' },
+  'airtable-data-manager': { name: 'Jenny Wilson', avatar: '/assets/avatars/avatar-female-2.png' },
+  'apple-notes-manager': { name: 'Albert Flores', avatar: '/assets/avatars/avatar-male-2.png' },
+  'apple-reminders-manager': { name: 'Kristin', avatar: '/assets/avatars/avatar-female-3.png' },
+  'architecture-diagram-generator': { name: 'Brooklyn', avatar: '/assets/avatars/avatar-male-3.png' },
+  'arxiv-paper-search': { name: 'Annette', avatar: '/assets/avatars/avatar-female-4.png' },
+  'ascii-art-generator': { name: 'Wade', avatar: '/assets/avatars/avatar-male-4.png' },
+  'ascii-video-generator': { name: 'Cameron', avatar: '/assets/agents/canvas-comment-avatar-2.png' },
+  'audiocraft-audio-generator': { name: 'Leslie', avatar: '/assets/agents/canvas-comment-avatar-3.png' },
+};
 
 const workflowCards = [
   {
@@ -401,7 +526,7 @@ const workflowCards = [
   },
 ];
 
-const previewCards = [...cards, ...cards, ...cards];
+const previewCards = cards.slice(0, 20);
 const previewWorkflowCards = [
   ...workflowCards,
   ...workflowCards,
@@ -1045,6 +1170,7 @@ type MessageItem = MockMessage;
 type ProjectItem = MockProjectItem;
 type ProjectFile = MockProjectFile;
 type PolicyTab = 'privacy' | 'agreement';
+type AgentActionHoverSuppression = 'collect' | 'like' | 'share' | null;
 
 const emptyMessageUnreadCounts: MessageUnreadCounts = {
   announcements: 0,
@@ -1088,6 +1214,10 @@ function getPageFromPath(pathname: string): PageMode {
     return 'projects';
   }
 
+  if (getAgentDetailIdFromPath(pathname) !== null) {
+    return 'home';
+  }
+
   if (pathname === pagePaths.account) {
     return 'account';
   }
@@ -1107,6 +1237,16 @@ function getProjectDetailIdFromPath(pathname: string) {
 
 function getProjectDetailPath(projectId: string) {
   return `/projects/${encodeURIComponent(projectId)}`;
+}
+
+function getAgentDetailIdFromPath(pathname: string) {
+  const match = pathname.match(/^\/agents\/([^/]+)$/);
+
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function getAgentDetailPath(agentId: string) {
+  return `/agents/${encodeURIComponent(agentId)}`;
 }
 
 function getMessageStateKey(messageMode: MessageMode, activeTab: string) {
@@ -1544,10 +1684,16 @@ function AccountAvatar({
 }: {
   account: MockAccount | null;
   avatarSrc: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }) {
   const sizeClassName =
-    size === 'sm' ? 'h-4 w-4 text-xxs' : size === 'lg' ? 'h-9 w-9 text-sm' : 'h-8 w-8 text-sm';
+    size === 'sm'
+      ? 'h-4 w-4 text-xxs'
+      : size === 'lg'
+        ? 'h-9 w-9 text-sm'
+        : size === 'xl'
+          ? 'h-10 w-10 text-sm'
+          : 'h-8 w-8 text-sm';
   const resolvedAvatarSrc =
     account?.type === 'enterprise' ? account.avatarSrc : avatarSrc;
 
@@ -3742,6 +3888,32 @@ function ProjectDetailNavTitle({
   );
 }
 
+function AgentDetailNavTitle({ onBack }: { onBack: () => void }) {
+  return (
+    <div
+      className="relative flex h-14 items-center gap-1"
+      data-node-id="4737:22441"
+      data-name="Title"
+    >
+      <button
+        className="flex h-5 shrink-0 items-center gap-1 text-sm font-medium leading-5 text-text-hint hover:text-text-secondary active:text-text-primary"
+        type="button"
+        onClick={onBack}
+      >
+        <Icon
+          name="ChevronLeft"
+          size="sm"
+          className="shrink-0"
+          data-node-id="4737:22442"
+        />
+        <span className="shrink-0" data-node-id="4737:22444">
+          返回
+        </span>
+      </button>
+    </div>
+  );
+}
+
 function TitleBar({
   activePage,
   viewMode,
@@ -3780,6 +3952,8 @@ function TitleBar({
   onLogoutClick,
   projectDetailTitle,
   onProjectDetailBack,
+  agentDetailTitle,
+  onAgentDetailBack,
   projectDetailMenuOpen = false,
   onProjectDetailMenuToggle,
   onProjectDetailMenuClose,
@@ -3826,13 +4000,16 @@ function TitleBar({
   onLogoutClick: () => void;
   projectDetailTitle?: string | null;
   onProjectDetailBack?: () => void;
+  agentDetailTitle?: string | null;
+  onAgentDetailBack?: () => void;
   projectDetailMenuOpen?: boolean;
   onProjectDetailMenuToggle?: () => void;
   onProjectDetailMenuClose?: () => void;
   onProjectDetailRename?: () => void;
   onProjectDetailDelete?: () => void;
 }) {
-  const showLeftContent = showModeTabs || Boolean(projectDetailTitle);
+  const showLeftContent =
+    showModeTabs || Boolean(projectDetailTitle) || Boolean(agentDetailTitle);
   const notificationTriggerRef = useRef<HTMLDivElement | null>(null);
   const topAvatarButtonRef = useRef<HTMLButtonElement | null>(null);
   const topAvatarPopoverRef = useRef<HTMLDivElement | null>(null);
@@ -3887,7 +4064,9 @@ function TitleBar({
             showLeftContent ? 'opacity-100' : 'pointer-events-none opacity-0',
           ].join(' ')}
         >
-          {projectDetailTitle ? (
+          {agentDetailTitle ? (
+            <AgentDetailNavTitle onBack={onAgentDetailBack ?? (() => undefined)} />
+          ) : projectDetailTitle ? (
             <ProjectDetailNavTitle
               projectTitle={projectDetailTitle}
               onBack={onProjectDetailBack ?? (() => undefined)}
@@ -6071,19 +6250,55 @@ function InteractiveCard({
 }
 
 function AgentCard({
+  id,
   title,
   description,
   image,
+  currentAccount,
+  externalRefreshKey,
+  onAgentDataChange,
   onOpenDetail,
 }: AgentCardData & {
+  currentAccount: MockAccount | null;
+  externalRefreshKey: number;
+  onAgentDataChange: () => void;
   onOpenDetail: () => void;
 }) {
+  const agentCardData = useMemo(
+    () => {
+      void externalRefreshKey;
+
+      return getMockAgentDetailData(id, currentAccount?.id ?? null);
+    },
+    [id, currentAccount?.id, externalRefreshKey],
+  );
+  const likeValue = agentCardData.stats.like;
+  const collectValue = agentCardData.stats.collect;
+  const isLiked = agentCardData.accountState.likedAgentIds.includes(id);
+  const isCollected = agentCardData.accountState.collectedAgentIds.includes(id);
+  const author = agentCardAuthorsById[id] ?? {
+    name: 'HelloMe官方',
+    avatar: hellomeOfficialAvatar,
+  };
+
+  function handleToggleLike(event: MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+    toggleMockAgentReaction(id, currentAccount?.id ?? null, 'like');
+    onAgentDataChange();
+  }
+
+  function handleToggleCollect(event: MouseEvent<HTMLButtonElement>) {
+    event.stopPropagation();
+    toggleMockAgentReaction(id, currentAccount?.id ?? null, 'collect');
+    onAgentDataChange();
+  }
+
   return (
     <InteractiveCard
-      heightClassName="h-[248px]"
+      heightClassName="h-[304px]"
       image={image}
-      contentHeightClassName="h-[88px]"
-      contentHoverHeightClassName="group-hover:h-[136px]"
+      contentHeightClassName="h-[144px]"
+      contentHoverHeightClassName="group-hover:h-[192px]"
       ariaLabel={`查看${title}详情`}
       onClick={onOpenDetail}
       actions={
@@ -6098,91 +6313,1477 @@ function AgentCard({
         </Button>
       }
     >
-        <div className="flex h-14 flex-col gap-1">
-          <h3 className="truncate text-sm font-medium text-text-primary">
-            {title}
-          </h3>
-          <p className="line-clamp-2 text-xs text-text-hint">{description}</p>
+        <div
+          className="flex h-full w-full flex-col items-start justify-end gap-2"
+          data-node-id="4755:15356"
+          data-name="Content"
+        >
+          <div
+            className="flex w-full shrink-0 flex-col items-start gap-1"
+            data-node-id="4755:15357"
+            data-name="Text container"
+          >
+            <div
+              className="flex w-full shrink-0 items-start"
+              data-node-id="4755:15358"
+              data-name="title"
+            >
+              <h3
+                className="min-w-0 flex-1 truncate text-sm font-medium leading-5 text-text-primary"
+                data-node-id="4755:15359"
+              >
+                {title}
+              </h3>
+            </div>
+            <div
+              className="flex w-full shrink-0 items-start"
+              data-node-id="4755:15360"
+              data-name="Body Text"
+            >
+              <p
+                className="line-clamp-2 min-w-0 flex-1 text-xs leading-4 text-text-hint"
+                data-node-id="4755:15361"
+              >
+                {description}
+              </p>
+            </div>
+          </div>
+          <div
+            className="flex h-4 w-full shrink-0 items-center"
+            data-node-id="4755:15362"
+            data-name="Divider"
+          >
+            <div className="h-px w-full bg-border-subtle" />
+          </div>
+          <div
+            className="flex w-full shrink-0 items-center gap-2"
+            data-node-id="4755:15364"
+            data-name="user"
+          >
+            <div
+              className="flex min-w-0 flex-1 items-center gap-2"
+              data-node-id="4755:15365"
+              data-name="published-user"
+            >
+              <div
+                className="h-4 w-4 shrink-0 overflow-hidden rounded-pill"
+                data-node-id="4755:15366"
+                data-name="Avatar"
+              >
+                <img
+                  className="h-full w-full object-cover"
+                  src={author.avatar}
+                  alt=""
+                />
+              </div>
+              <div
+                className="flex shrink-0 items-center justify-center"
+                data-node-id="4755:15368"
+                data-name="Name"
+              >
+                <p
+                  className="whitespace-nowrap text-xs leading-4 text-text-secondary"
+                  data-node-id="4755:15369"
+                >
+                  {author.name}
+                </p>
+              </div>
+            </div>
+            <div
+              className="flex shrink-0 items-center justify-end gap-4"
+              data-node-id="4755:15370"
+              data-name="data-info"
+            >
+              <button
+                className={[
+                  'flex h-4 shrink-0 items-center gap-1 transition-colors',
+                  isLiked ? 'text-accent-red' : 'text-text-secondary hover:text-text-primary',
+                ].join(' ')}
+                data-name="like"
+                type="button"
+                onClick={handleToggleLike}
+              >
+                <span
+                  className="flex h-[13px] w-[13px] shrink-0 items-center justify-center"
+                  data-node-id="4755:15372"
+                  data-name="lucide/heart"
+                >
+                  <Icon
+                    name="Heart"
+                    size="agent-card"
+                    className={isLiked ? 'fill-current' : undefined}
+                  />
+                </span>
+                <span
+                  className="whitespace-nowrap text-xs leading-4"
+                  data-node-id="4755:15374"
+                >
+                  {likeValue}
+                </span>
+              </button>
+              <button
+                className={[
+                  'flex h-4 shrink-0 items-center gap-1 transition-colors',
+                  isCollected ? 'text-accent-orange' : 'text-text-secondary hover:text-text-primary',
+                ].join(' ')}
+                data-name="collect"
+                type="button"
+                onClick={handleToggleCollect}
+              >
+                <span
+                  className="flex h-[13px] w-[13px] shrink-0 items-center justify-center"
+                  data-node-id="4755:15376"
+                  data-name="lucide/star"
+                >
+                  <Icon
+                    name="Star"
+                    size="agent-card"
+                    className={isCollected ? 'fill-current' : undefined}
+                  />
+                </span>
+                <span
+                  className="whitespace-nowrap text-xs leading-4"
+                  data-node-id="4755:15378"
+                >
+                  {collectValue}
+                </span>
+              </button>
+            </div>
+          </div>
         </div>
     </InteractiveCard>
   );
 }
 
-function AgentDetailModal({
+type AgentDetailVariant = 'empty' | 'commented';
+
+type AgentDetailStat = {
+  nodeIds: [string, string, string];
+  name: MockAgentStatName;
+  value: string;
+  label: string;
+};
+
+type AgentCommentItem = MockAgentCommentItem;
+
+const hzCanvasCovers = [
+  '/assets/home/agents/card-1.png',
+  '/assets/home/agents/card-4.png',
+  '/assets/home/agents/card-5.png',
+];
+
+const agentCoverImagesById: Partial<Record<string, string[]>> = {
+  'hz-canvas': hzCanvasCovers,
+  'moneyprinterturbo-local-hermes': [
+    '/assets/home/agents/card-2.png',
+    '/assets/home/agents/card-3.png',
+    '/assets/home/agents/card-6.png',
+  ],
+};
+
+const hzCanvasDetailDescription = [
+  'Hz Canvas 是一个面向图片与视频创作的无限画布工具，它把素材管理、灵感整理、AI 图像生成、视频分镜和项目批注整合在同一个工作空间里。你可以把参考图、角色设定、脚本片段、镜头草图和生成结果放在同一张画布中，通过拖拽建立素材之间的关系，让创作过程不再被零散文件和反复切换的软件打断。对于需要长时间推进的内容项目，画布会保留每一次尝试、每一个版本和每一条批注，方便你随时回到某个节点继续扩展。',
+  '在实际使用中，Hz Canvas 适合短视频脚本、广告分镜、角色设定、产品概念图、品牌视觉探索和内容矩阵的批量创作。创作者可以先把灵感与素材收集到画布里，再围绕不同主题拆分区域，记录提示词、生成参数、画面方向和后续修改意见。团队协作时，成员可以围绕同一份素材上下文讨论问题，补充参考，沉淀可复用的工作流。相比只保存最终图片，它更重视创作过程中的上下文，帮助团队知道每张图为什么这样生成、下一步应该往哪里调整。你也可以把不同方向的尝试并排摆放，快速比较构图、色彩、角色动作和镜头节奏，再把最终选定的版本继续延展成完整的视频分镜或成组素材。',
+  '当项目资料越来越多时，Hz Canvas 会帮助你把素材按照主题、场景、用途和阶段组织起来，减少反复查找、复制粘贴和重新说明背景的时间。你可以把成熟的提示词、镜头模板、风格参考和审核意见沉淀下来，在后续项目中继续复用。对于需要连续产出的内容团队，它可以把零散想法变成可追踪的创作流程：从灵感收集、画面生成、镜头拆分，到视频草稿和最终交付，每一步都能在画布上保留上下文，方便回溯、修改和继续扩展。',
+].join('\n\n');
+
+const agentDetailConfigs: Record<AgentDetailVariant, {
+  title: string;
+  subtitle: string;
+  banner: string;
+  authorAvatar: string;
+  inputAvatar: string;
+  description: string;
+  contentAreaHeightClassName: string;
+  bodyWrapNodeId?: string;
+  bodyWrapName?: string;
+  bodyWrapHeightClassName?: string;
+  bodyTextNodeId: string;
+  bodyTextInnerNodeId: string;
+  commentsNodeId: string;
+  commentsHeightClassName: string;
+  titleBarNodeId: string;
+  commentsTitleNodeId: string;
+  commentsTitleTextNodeId: string;
+  engageNodeId: string;
+  engageAvatarNodeId: string;
+  inputBoxNodeId: string;
+  inputTextareaNodeId: string;
+  inputTextNodeId: string;
+  inputRightNodeId: string;
+  inputButtonNodeId: string;
+  commentsContainerNodeId: string;
+  stats: AgentDetailStat[];
+}> = {
+  empty: {
+    title: '公众号文章一键排版',
+    subtitle: '图像与音视频',
+    banner: '/assets/agents/detail-banner.png',
+    authorAvatar: hellomeOfficialAvatar,
+    inputAvatar: '/assets/agents/comment-avatar.png',
+    description:
+      '输入一个主题，它会自动抓取相关资讯，生成文章、配图和排版内容，并可将成品保存到公众号草稿箱，减少查资料、写文章和排版的时间。',
+    contentAreaHeightClassName: 'h-[640px]',
+    bodyTextNodeId: '4737:22491',
+    bodyTextInnerNodeId: '4737:22492',
+    commentsNodeId: '4737:22493',
+    commentsHeightClassName: 'h-[337px]',
+    titleBarNodeId: '4737:22494',
+    commentsTitleNodeId: '4737:22495',
+    commentsTitleTextNodeId: '4737:22496',
+    engageNodeId: '4737:22497',
+    engageAvatarNodeId: '4737:22498',
+    inputBoxNodeId: '4737:22500',
+    inputTextareaNodeId: '4737:22501',
+    inputTextNodeId: '4737:22502',
+    inputRightNodeId: '4737:22503',
+    inputButtonNodeId: '4737:22504',
+    commentsContainerNodeId: '4737:22505',
+    stats: [
+      { nodeIds: ['4737:22660', '4737:22661', '4737:22662'], name: 'comments', value: '0', label: '评论' },
+      { nodeIds: ['4737:22655', '4737:22656', '4737:22657'], name: 'like', value: '0', label: '获赞' },
+      { nodeIds: ['4737:22665', '4737:22666', '4737:22667'], name: 'collect', value: '0', label: '收藏' },
+      { nodeIds: ['4737:22670', '4737:22671', '4737:22672'], name: 'share', value: '0', label: '分享' },
+    ],
+  },
+  commented: {
+    title: 'Hz Canvas无限画布',
+    subtitle: '图像与音视频',
+    banner: '/assets/agents/canvas-banner.png',
+    authorAvatar: hellomeOfficialAvatar,
+    inputAvatar: '/assets/agents/canvas-comment-avatar-1.png',
+    description:
+      '大型语言模型32，支持高性能绘图平台，适用于手绘、写实、抽象、水彩等多种风格，提供超高清质量，快速生成精美图像。这是技能的详细介绍，文字自适应换行。这是技能的详细介绍，文字自适应换行。这是技能的详细介绍，文字自适应换行。',
+    contentAreaHeightClassName: 'h-auto',
+    bodyWrapNodeId: '4740:24397',
+    bodyWrapName: 'content-wrap prompt',
+    bodyWrapHeightClassName: 'h-auto',
+    bodyTextNodeId: '4740:24398',
+    bodyTextInnerNodeId: '4740:24399',
+    commentsNodeId: '4727:18756',
+    commentsHeightClassName: 'h-[793px]',
+    titleBarNodeId: '4731:19248',
+    commentsTitleNodeId: '4734:19638',
+    commentsTitleTextNodeId: '4731:19249',
+    engageNodeId: '4727:18759',
+    engageAvatarNodeId: '4727:19062',
+    inputBoxNodeId: '4737:23796',
+    inputTextareaNodeId: '4737:23797',
+    inputTextNodeId: '4737:23798',
+    inputRightNodeId: '4737:23799',
+    inputButtonNodeId: '4737:23800',
+    commentsContainerNodeId: '4731:19244',
+    stats: [
+      { nodeIds: ['4727:18888', '4727:18889', '4727:18890'], name: 'comments', value: '512', label: '评论' },
+      { nodeIds: ['4727:18883', '4727:18884', '4727:18885'], name: 'like', value: '210', label: '获赞' },
+      { nodeIds: ['4727:18893', '4727:18894', '4727:18895'], name: 'collect', value: '98', label: '收藏' },
+      { nodeIds: ['4727:18898', '4727:18899', '4727:18900'], name: 'share', value: '24', label: '分享' },
+    ],
+  },
+};
+
+function AgentCommentRow({
+  comment,
+  onLikeClick,
+  onReplyClick,
+}: {
+  comment: AgentCommentItem;
+  onLikeClick: (commentId: string) => void;
+  onReplyClick: (commentId: string) => void;
+}) {
+  const isIndented = Boolean(comment.indent);
+  const avatarSizeClassName = isIndented ? 'h-6 w-6' : 'h-10 w-10';
+  const rowHeightClassName = comment.heightClassName ?? (isIndented ? 'min-h-[76px]' : 'min-h-[92px]');
+  const rightHeightClassName = comment.rightHeightClassName ?? 'min-h-[60px]';
+  const contentHeightClassName = comment.contentHeightClassName ?? 'min-h-5';
+  const topMarginClassName = isIndented ? 'ml-[52px]' : '';
+
+  return (
+    <div
+      className={`flex ${rowHeightClassName} w-full min-w-0 shrink-0 items-start py-2`}
+      data-node-id={comment.nodeId}
+      data-name="comment-inner-container"
+    >
+      <div
+        className={[
+          topMarginClassName,
+          avatarSizeClassName,
+          'shrink-0 overflow-hidden rounded-pill',
+          comment.avatarSrc
+            ? 'shadow-avatar-border'
+            : 'bg-bg-black text-text-inverse',
+        ].join(' ')}
+        data-node-id={comment.avatarNodeId}
+        data-name="Avatar"
+      >
+        {comment.avatarSrc ? (
+          <img className="h-full w-full object-cover" src={comment.avatarSrc} alt="" />
+        ) : (
+          <div
+            className={[
+              'flex h-full w-full items-center justify-center font-medium',
+              isIndented ? 'text-xs leading-4' : 'text-sm leading-5',
+            ].join(' ')}
+          >
+            {comment.avatarText}
+          </div>
+        )}
+      </div>
+      <div
+        className={`ml-3 flex ${rightHeightClassName} min-w-0 flex-1 flex-col items-start`}
+        data-node-id={comment.rightNodeId}
+        data-name="right"
+      >
+        <div
+          className="flex h-5 w-full shrink-0 items-center"
+          data-node-id={comment.authorWrapperNodeId}
+          data-name="author-wrapper"
+        >
+          <p
+            className="min-w-0 flex-1 truncate text-sm leading-5 text-text-primary"
+            data-node-id={comment.authorNodeId}
+            data-name="author"
+          >
+            {comment.author}
+          </p>
+          <button
+            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-text-hint transition-colors hover:bg-bg-hover hover:text-text-primary active:bg-bg-active"
+            data-name="Button"
+            type="button"
+          >
+            <Icon name="Ellipsis" size="sm" />
+          </button>
+        </div>
+        <div
+          className={`mt-1 flex ${contentHeightClassName} w-full shrink-0 items-start overflow-hidden`}
+          data-node-id={comment.commentNodeId}
+          data-name="Comment"
+        >
+          <p className="w-full text-sm leading-5 text-text-primary">{comment.content}</p>
+        </div>
+        <div
+          className="mt-1 flex h-5 w-full shrink-0 items-center"
+          data-node-id={comment.dateNodeId}
+          data-name="date"
+        >
+          <p className="text-xs leading-4 text-text-hint">{comment.date}</p>
+        </div>
+        <div
+          className="mt-1 flex h-5 w-full shrink-0 items-center gap-4"
+          data-node-id={comment.interactionsNodeId}
+          data-name="interactions"
+        >
+          {comment.actions.map((action) => (
+            <button
+              key={`${comment.nodeId}-${action.icon}-${action.label}`}
+              className={[
+                'flex h-4 shrink-0 items-center gap-1 text-xs leading-4 transition-colors',
+                action.icon === 'Heart' && comment.isLiked
+                  ? 'text-accent-red hover:text-accent-red active:text-accent-red'
+                  : 'text-text-hint hover:text-text-primary',
+              ].join(' ')}
+              type="button"
+              onClick={() => {
+                if (action.icon === 'MessageCircle') {
+                  onReplyClick(comment.nodeId);
+                  return;
+                }
+
+                if (action.icon === 'Heart') {
+                  onLikeClick(comment.nodeId);
+                }
+              }}
+            >
+              <Icon
+                name={action.icon}
+                size="sm"
+                className={
+                  action.icon === 'Heart' && comment.isLiked
+                    ? 'fill-current'
+                    : undefined
+                }
+              />
+              <span>{action.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AgentReplyInput({
+  isIndented,
+  value,
+  onValueChange,
+  onSubmit,
+}: {
+  isIndented: boolean;
+  value: string;
+  onValueChange: (nextValue: string) => void;
+  onSubmit: () => void;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const hasValue = value.trim().length > 0;
+  const offsetClassName = isIndented ? 'pl-[88px]' : 'pl-[52px]';
+
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current;
+
+    if (!textarea) {
+      return;
+    }
+
+    textarea.style.height = '22px';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 102)}px`;
+  }, [value]);
+
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
+
+  return (
+    <div
+      className={`flex w-full min-w-0 shrink-0 items-start pb-4 pt-2 ${offsetClassName}`}
+      data-node-id="4737:24067"
+      data-name="reply-input-container"
+    >
+      <div
+        className="flex max-h-[110px] min-h-10 min-w-0 flex-1 items-start gap-4 rounded-lg bg-transparent py-1 pl-4 pr-1 shadow-border-strong transition-shadow hover:shadow-border-hover focus-within:!shadow-border-selected"
+        data-node-id="4737:24068"
+        data-name="input-box"
+      >
+        <textarea
+          ref={textareaRef}
+          className="scrollbar-none min-h-[22px] min-w-0 flex-1 resize-none overflow-y-auto bg-transparent py-[5px] text-sm leading-[22px] text-text-primary outline-none placeholder:text-text-placeholder"
+          data-node-id="4737:24069"
+          data-name="content-textarea"
+          placeholder="回复："
+          rows={1}
+          value={value}
+          onChange={(event) => onValueChange(event.target.value)}
+        />
+        <div
+          className="flex w-[60px] shrink-0 self-stretch flex-col items-center justify-center"
+          data-node-id="4737:24070"
+          data-name="right-btn-area"
+        >
+          <Button
+            size="md"
+            variant={hasValue ? 'primary' : 'text'}
+            className="h-8 w-[60px] px-4"
+            disabled={!hasValue}
+            data-node-id="4737:24071"
+            onClick={onSubmit}
+          >
+            发送
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AgentCommentList({
+  comments,
+  onCommentLikeToggle,
+  onReplySubmit,
+}: {
+  comments: AgentCommentItem[];
+  onCommentLikeToggle: (commentId: string) => void;
+  onReplySubmit: (commentId: string, content: string) => void;
+}) {
+  const [expandedCommentIds, setExpandedCommentIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [activeReplyTargetId, setActiveReplyTargetId] = useState<string | null>(null);
+  const [replyDraft, setReplyDraft] = useState('');
+
+  function toggleReplies(commentId: string) {
+    setExpandedCommentIds((currentIds) => {
+      const nextIds = new Set(currentIds);
+
+      if (nextIds.has(commentId)) {
+        nextIds.delete(commentId);
+      } else {
+        nextIds.add(commentId);
+      }
+
+      return nextIds;
+    });
+  }
+
+  function openReplyInput(commentId: string) {
+    setActiveReplyTargetId((currentTargetId) => {
+      if (currentTargetId === commentId) {
+        setReplyDraft('');
+        return null;
+      }
+
+      setReplyDraft('');
+      return commentId;
+    });
+  }
+
+  function renderCommentWithReplyInput(
+    comment: AgentCommentItem,
+    rootCommentId: string,
+  ) {
+    function handleSubmitReply() {
+      const normalizedReply = replyDraft.trim();
+
+      if (normalizedReply.length === 0) return;
+
+      onReplySubmit(
+        rootCommentId,
+        comment.indent ? `回复 ${comment.author}：${normalizedReply}` : normalizedReply,
+      );
+      setReplyDraft('');
+      setActiveReplyTargetId(null);
+    }
+
+    return (
+      <>
+        <AgentCommentRow
+          comment={comment}
+          onLikeClick={onCommentLikeToggle}
+          onReplyClick={openReplyInput}
+        />
+        {activeReplyTargetId === comment.nodeId && (
+          <AgentReplyInput
+            isIndented={Boolean(comment.indent)}
+            value={replyDraft}
+            onValueChange={setReplyDraft}
+            onSubmit={handleSubmitReply}
+          />
+        )}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div
+        className="flex w-full shrink-0 flex-col items-start gap-4"
+        data-node-id="4731:19244"
+        data-name="comments-container"
+      >
+        {comments.map((comment) => {
+          const replies = comment.replies ?? [];
+          const defaultVisibleReplyCount = comment.defaultVisibleReplyCount ?? 5;
+          const isExpanded = expandedCommentIds.has(comment.nodeId);
+          const visibleReplies = isExpanded
+            ? replies
+            : replies.slice(0, defaultVisibleReplyCount);
+          const hiddenReplyCount = Math.max(0, replies.length - visibleReplies.length);
+
+          return (
+            <div
+              key={comment.nodeId}
+              className="flex w-full shrink-0 flex-col items-start"
+              data-node-id={comment.replies ? '4740:24548' : comment.nodeId}
+              data-name="comment-group"
+            >
+              <div className="flex w-full shrink-0 flex-col items-start" data-name="main-comment">
+                {renderCommentWithReplyInput(comment, comment.nodeId)}
+              </div>
+              {replies.length > 0 && (
+                <div
+                  className="flex w-full shrink-0 flex-col items-start"
+                  data-name="reply-comments"
+                >
+                  {visibleReplies.map((reply) => (
+                    <div key={reply.nodeId} className="flex w-full shrink-0 flex-col items-start" data-name="reply-comment">
+                      {renderCommentWithReplyInput(reply, comment.nodeId)}
+                    </div>
+                  ))}
+                  {hiddenReplyCount > 0 && (
+                    <div
+                      className="flex h-9 w-full shrink-0 items-center py-2 pl-[88px]"
+                      data-node-id="4740:24697"
+                      data-name="show-more-replies"
+                    >
+                      <button
+                        className="flex h-5 items-center gap-1 text-sm font-medium leading-5 text-accent-commentReply transition-colors hover:text-accent-commentReplyHover active:text-accent-commentReply"
+                        type="button"
+                        onClick={() => toggleReplies(comment.nodeId)}
+                      >
+                        展开 {hiddenReplyCount} 条评论
+                      </button>
+                    </div>
+                  )}
+                  {isExpanded && replies.length > defaultVisibleReplyCount && (
+                    <div
+                      className="flex h-9 w-full shrink-0 items-center py-2 pl-[88px]"
+                      data-name="show-less-replies"
+                    >
+                      <button
+                        className="flex h-5 items-center gap-1 text-sm font-medium leading-5 text-accent-commentReply transition-colors hover:text-accent-commentReplyHover active:text-accent-commentReply"
+                        type="button"
+                        onClick={() => toggleReplies(comment.nodeId)}
+                      >
+                        收起回复
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div
+        className="flex h-[68px] w-full shrink-0 items-center"
+        data-node-id="4727:18851"
+        data-name="end-container"
+      >
+        <div className="h-px min-w-0 flex-1 bg-border-default" data-node-id="4727:18852" data-name="Line 26" />
+        <p className="mx-4 w-[42px] shrink-0 text-center text-sm leading-5 text-text-hint" data-node-id="4727:18853">
+          到底了
+        </p>
+        <div className="h-px min-w-0 flex-1 bg-border-default" data-node-id="4727:18854" data-name="Line 27" />
+      </div>
+    </>
+  );
+}
+
+function AgentDetailPage({
   agent,
-  onClose,
+  currentAccount,
+  externalRefreshKey,
+  profileAvatarSrc,
+  profileLabel,
 }: {
   agent: AgentCardData;
-  onClose: () => void;
+  currentAccount: MockAccount | null;
+  externalRefreshKey: number;
+  profileAvatarSrc: string;
+  profileLabel: string;
 }) {
+  const [commentDraft, setCommentDraft] = useState('');
+  const [coverIndex, setCoverIndex] = useState(0);
+  const [pendingCoverIndex, setPendingCoverIndex] = useState<number | null>(null);
+  const [coverSlideDirection, setCoverSlideDirection] = useState<'left' | 'right'>('left');
+  const [isCoverSliding, setIsCoverSliding] = useState(false);
+  const [isIntroExpanded, setIsIntroExpanded] = useState(false);
+  const [canExpandIntro, setCanExpandIntro] = useState(false);
+  const [agentDetailRefreshKey, setAgentDetailRefreshKey] = useState(0);
+  const [suppressedAgentActionHover, setSuppressedAgentActionHover] =
+    useState<AgentActionHoverSuppression>(null);
+  const commentTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const introTextRef = useRef<HTMLParagraphElement | null>(null);
+  const coverSlideTimeoutRef = useRef<number | null>(null);
+  const hasCommentDraft = commentDraft.trim().length > 0;
+  const agentDetailData = useMemo(
+    () => {
+      void agentDetailRefreshKey;
+      void externalRefreshKey;
+
+      return getMockAgentDetailData(
+        agent.id,
+        currentAccount?.id ?? null,
+      );
+    },
+    [agent.id, currentAccount?.id, agentDetailRefreshKey, externalRefreshKey],
+  );
+  const detailVariant: AgentDetailVariant = agentDetailData.hasData
+    ? 'commented'
+    : 'empty';
+  const detailConfig = agentDetailConfigs[detailVariant];
+  const isCommentedDetail = detailVariant === 'commented';
+  const detailTitle = agent.title;
+  const detailSubtitle =
+    'detailSubtitle' in agent ? agent.detailSubtitle : detailConfig.subtitle;
+  const detailDescription = isCommentedDetail
+    ? agent.id === 'hz-canvas'
+      ? hzCanvasDetailDescription
+      : agent.description
+    : agent.description;
+  const coverImages = agentCoverImagesById[agent.id] ?? [agent.image];
+  const hasMultipleCoverImages = coverImages.length >= 2;
+  const commentCount = agentDetailData.comments.length;
+  const detailStats = detailConfig.stats.map((stat) => ({
+    ...stat,
+    value: agentDetailData.stats[stat.name],
+  }));
+  const isAgentCollected = agentDetailData.accountState.collectedAgentIds.includes(agent.id);
+  const isAgentLiked = agentDetailData.accountState.likedAgentIds.includes(agent.id);
+  const currentCommentAuthor = useMemo<MockAgentAuthorInput>(() => {
+    if (currentAccount?.type === 'enterprise') {
+      return {
+        author: currentAccount.name,
+        avatarText: getAccountInitial(currentAccount.name),
+      };
+    }
+
+    return {
+      author: profileLabel,
+      avatarSrc: profileAvatarSrc,
+    };
+  }, [currentAccount, profileAvatarSrc, profileLabel]);
+
+  useEffect(() => {
+    if (coverSlideTimeoutRef.current !== null) {
+      window.clearTimeout(coverSlideTimeoutRef.current);
+      coverSlideTimeoutRef.current = null;
+    }
+
+    setCoverIndex(0);
+    setPendingCoverIndex(null);
+    setIsCoverSliding(false);
+    setIsIntroExpanded(false);
+  }, [agent.id]);
+
+  useEffect(() => {
+    return () => {
+      if (coverSlideTimeoutRef.current !== null) {
+        window.clearTimeout(coverSlideTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  function showCover(nextIndex: number, direction: 'left' | 'right') {
+    if (
+      !hasMultipleCoverImages ||
+      nextIndex === coverIndex ||
+      pendingCoverIndex !== null
+    ) {
+      return;
+    }
+
+    if (coverSlideTimeoutRef.current !== null) {
+      window.clearTimeout(coverSlideTimeoutRef.current);
+    }
+
+    setPendingCoverIndex(nextIndex);
+    setCoverSlideDirection(direction);
+    setIsCoverSliding(false);
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        setIsCoverSliding(true);
+      });
+    });
+
+    coverSlideTimeoutRef.current = window.setTimeout(() => {
+      setCoverIndex(nextIndex);
+      setPendingCoverIndex(null);
+      setIsCoverSliding(false);
+    }, 340);
+  }
+
+  function handlePreviousCover() {
+    showCover(
+      coverIndex === 0 ? coverImages.length - 1 : coverIndex - 1,
+      'right',
+    );
+  }
+
+  function handleNextCover() {
+    showCover(
+      coverIndex === coverImages.length - 1 ? 0 : coverIndex + 1,
+      'left',
+    );
+  }
+
+  function handleSelectCover(nextIndex: number) {
+    showCover(nextIndex, nextIndex > coverIndex ? 'left' : 'right');
+  }
+
+  function refreshAgentDetailData() {
+    setAgentDetailRefreshKey((currentKey) => currentKey + 1);
+  }
+
+  function handleSubmitComment() {
+    const normalizedComment = commentDraft.trim();
+
+    if (normalizedComment.length === 0) return;
+
+    addMockAgentComment(
+      agent.id,
+      currentAccount?.id ?? null,
+      normalizedComment,
+      currentCommentAuthor,
+    );
+    setCommentDraft('');
+    refreshAgentDetailData();
+  }
+
+  function handleSubmitReply(commentId: string, content: string) {
+    addMockAgentReply(
+      agent.id,
+      currentAccount?.id ?? null,
+      commentId,
+      content,
+      currentCommentAuthor,
+    );
+    refreshAgentDetailData();
+  }
+
+  function handleToggleCommentLike(commentId: string) {
+    toggleMockAgentCommentLike(
+      agent.id,
+      currentAccount?.id ?? null,
+      commentId,
+    );
+    refreshAgentDetailData();
+  }
+
+  function handleToggleAgentCollect() {
+    toggleMockAgentReaction(agent.id, currentAccount?.id ?? null, 'collect');
+    setSuppressedAgentActionHover('collect');
+    refreshAgentDetailData();
+  }
+
+  function handleToggleAgentLike() {
+    toggleMockAgentReaction(agent.id, currentAccount?.id ?? null, 'like');
+    setSuppressedAgentActionHover('like');
+    refreshAgentDetailData();
+  }
+
+  function handleShareAgent() {
+    const shareUrl = window.location.href;
+
+    setSuppressedAgentActionHover('share');
+    void navigator.clipboard?.writeText(shareUrl).catch(() => {
+      const textarea = document.createElement('textarea');
+
+      textarea.value = shareUrl;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.append(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      textarea.remove();
+    });
+  }
+
+  useLayoutEffect(() => {
+    const textarea = commentTextareaRef.current;
+
+    if (!textarea) {
+      return;
+    }
+
+    textarea.style.height = '22px';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 102)}px`;
+  }, [commentDraft]);
+
+  useLayoutEffect(() => {
+    function updateCanExpandIntro() {
+      const introText = introTextRef.current;
+
+      if (!introText || !isCommentedDetail) {
+        setCanExpandIntro(false);
+        return;
+      }
+
+      setCanExpandIntro(introText.scrollHeight > 228);
+    }
+
+    updateCanExpandIntro();
+    window.addEventListener('resize', updateCanExpandIntro);
+
+    return () => {
+      window.removeEventListener('resize', updateCanExpandIntro);
+    };
+  }, [detailDescription, isCommentedDetail]);
+
   return (
-    <ContentModal
-      ariaLabel={`${agent.title}详情`}
-      bodyPadding={false}
-      panelClassName="relative py-8"
-      bodyClassName="overflow-y-auto"
-      showCloseButton={false}
-      header={({ close }) => (
-        <div className="absolute left-0 right-0 top-0 z-10 flex items-center justify-end gap-2 pb-2 pl-6 pr-4 pt-4">
-          <ModalCloseButton aria-label="关闭智能体详情弹窗" onClick={close} />
-        </div>
-      )}
-      onClose={onClose}
-    >
-      <div className="flex w-full flex-col items-center">
-        <section className="flex w-full flex-col items-start gap-4 px-12 pt-4">
-          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-bg-black/5">
-            <img className="h-full w-full object-cover" src={agent.image} alt="" />
-          </div>
-          <div className="flex w-full items-center justify-center gap-6">
-            <div className="flex min-w-0 flex-1 flex-col items-start gap-1">
-              <h2 className="w-full text-lg font-medium leading-7 text-text-primary">
-                {agent.title}
-              </h2>
-              <p className="w-full text-xs leading-4 text-text-hint">
-                {agent.description}
-              </p>
+    <div className="agent-detail-layout page-section-x flex min-h-[calc(100vh-56px)] w-full justify-center bg-bg-soft">
+      <div className="agent-detail-content flex w-full max-w-[1280px] items-start gap-12 py-6">
+        <section
+          className="flex min-w-0 flex-1 flex-col items-start"
+          data-node-id={isCommentedDetail ? '4727:18729' : '4737:22469'}
+          data-name="left"
+        >
+          <div
+            className={`flex ${detailConfig.contentAreaHeightClassName} w-full shrink-0 flex-col items-start`}
+            data-node-id={isCommentedDetail ? '4727:18730' : '4737:22470'}
+            data-name="Content Area"
+          >
+            <div
+              className="flex h-[68px] w-full shrink-0 flex-col items-start"
+              data-node-id={isCommentedDetail ? '4727:18731' : '4737:22471'}
+              data-name="Heading"
+            >
+              <div
+                className="flex h-8 w-full shrink-0 items-start"
+                data-node-id={isCommentedDetail ? '4727:18732' : '4737:22472'}
+                data-name="title"
+              >
+                <h1
+                  className="w-full text-2xl font-medium leading-8 text-text-primary"
+                  data-node-id={isCommentedDetail ? '4727:18733' : '4737:22473'}
+                >
+                  {detailTitle}
+                </h1>
+              </div>
+              <div
+                className="mt-2 flex h-5 w-full shrink-0 items-start"
+                data-node-id={isCommentedDetail ? '4737:21141' : '4737:22474'}
+                data-name="Subtitle"
+              >
+                <p
+                  className="w-full text-sm leading-5 text-text-hint"
+                  data-node-id={isCommentedDetail ? '4737:21142' : '4737:22475'}
+                >
+                  {detailSubtitle}
+                </p>
+              </div>
             </div>
+
+            <div
+              className="flex w-full shrink-0 flex-col items-start py-4"
+              data-node-id={isCommentedDetail ? '4734:19639' : '4737:22476'}
+              data-name="Media Section"
+            >
+              <div
+                className="group/media relative aspect-[892/502] w-full shrink-0 overflow-hidden rounded-xl bg-bg-strong"
+                data-node-id={isCommentedDetail ? '4737:23131' : '4737:22477'}
+                data-name="Media Container"
+              >
+                <img
+                  key={`active-cover-${agent.id}-${coverIndex}`}
+                  className={[
+                    'absolute inset-0 h-full w-full object-cover transition-transform duration-300 ease-out',
+                    pendingCoverIndex === null || !isCoverSliding
+                      ? 'translate-x-0'
+                      : coverSlideDirection === 'left'
+                        ? '-translate-x-full'
+                        : 'translate-x-full',
+                  ].join(' ')}
+                  src={coverImages[coverIndex] ?? agent.image}
+                  alt=""
+                />
+                {pendingCoverIndex !== null && (
+                  <img
+                    key={`pending-cover-${agent.id}-${pendingCoverIndex}`}
+                    className={[
+                      'absolute inset-0 h-full w-full object-cover transition-transform duration-300 ease-out',
+                      isCoverSliding
+                        ? 'translate-x-0'
+                        : coverSlideDirection === 'left'
+                          ? 'translate-x-full'
+                          : '-translate-x-full',
+                    ].join(' ')}
+                    src={coverImages[pendingCoverIndex] ?? agent.image}
+                    alt=""
+                  />
+                )}
+                {hasMultipleCoverImages && (
+                  <>
+                    <button
+                      aria-label="上一张封面"
+                      className="absolute left-5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-pill bg-bg-black/40 text-text-inverse opacity-0 transition-colors transition-opacity duration-150 hover:bg-bg-black/60 group-hover/media:opacity-100"
+                      type="button"
+                      onClick={handlePreviousCover}
+                    >
+                      <Icon name="ChevronLeft" size="md" />
+                    </button>
+                    <button
+                      aria-label="下一张封面"
+                      className="absolute right-5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-pill bg-bg-black/40 text-text-inverse opacity-0 transition-colors transition-opacity duration-150 hover:bg-bg-black/60 group-hover/media:opacity-100"
+                      type="button"
+                      onClick={handleNextCover}
+                    >
+                      <Icon name="ChevronRight" size="md" />
+                    </button>
+                  </>
+                )}
+                {hasMultipleCoverImages && (
+                  <div
+                    className="absolute bottom-0 left-1/2 flex h-3.5 -translate-x-1/2 items-center gap-1"
+                    data-node-id={isCommentedDetail ? '4737:23133' : '4737:22479'}
+                    data-name="Indicator"
+                  >
+                    {coverImages.map((coverImage, index) => (
+                      <button
+                        key={coverImage}
+                        aria-label={`切换到第 ${index + 1} 张封面`}
+                        className={[
+                          'h-0.5 w-2 rounded-pill transition-colors',
+                          index === (pendingCoverIndex ?? coverIndex)
+                            ? 'bg-bg-white'
+                            : 'bg-bg-white/40',
+                        ].join(' ')}
+                        type="button"
+                        onClick={() => handleSelectCover(index)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {isCommentedDetail ? (
+              <div
+                className={`flex ${detailConfig.bodyWrapHeightClassName} w-full shrink-0 flex-col items-start`}
+                data-node-id={detailConfig.bodyWrapNodeId}
+                data-name={detailConfig.bodyWrapName}
+              >
+                <div
+                  className="flex w-full shrink-0 items-start py-2"
+                  data-node-id={detailConfig.bodyTextNodeId}
+                  data-name="Body Text"
+                >
+                  <p
+                    ref={introTextRef}
+                    className={[
+                      'flex w-full flex-col gap-2 overflow-hidden text-justify text-sm leading-[22px] text-text-primary',
+                      isIntroExpanded || !canExpandIntro ? '' : 'max-h-[228px]',
+                    ].join(' ')}
+                    data-node-id={detailConfig.bodyTextInnerNodeId}
+                  >
+                    {detailDescription.split('\n\n').map((paragraph) => (
+                      <span key={paragraph}>{paragraph}</span>
+                    ))}
+                  </p>
+                </div>
+                {canExpandIntro && (
+                  <div
+                    className="flex h-9 w-full shrink-0 items-center py-2"
+                    data-name="expand-action"
+                  >
+                    <button
+                      className="flex h-5 shrink-0 items-center gap-1 text-sm leading-5 text-text-hint transition-colors hover:text-text-primary"
+                      type="button"
+                      onClick={() => setIsIntroExpanded((currentValue) => !currentValue)}
+                    >
+                      {isIntroExpanded ? '收起' : '展开全部'}
+                      <Icon name={isIntroExpanded ? 'ChevronUp' : 'ChevronDown'} size="sm" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div
+                className="flex h-[38px] w-full shrink-0 items-start py-2"
+                data-node-id={detailConfig.bodyTextNodeId}
+                data-name="Body Text"
+              >
+                <p
+                  className="w-full text-justify text-sm leading-[22px] text-text-primary"
+                  data-node-id={detailConfig.bodyTextInnerNodeId}
+                >
+                  {detailDescription}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div
+            className={`mt-6 flex ${isCommentedDetail ? 'h-auto' : detailConfig.commentsHeightClassName} w-full shrink-0 flex-col items-start`}
+            data-node-id={detailConfig.commentsNodeId}
+            data-name="comments"
+          >
+            <div
+              className="flex h-14 w-full shrink-0 items-start py-4"
+              data-node-id={detailConfig.titleBarNodeId}
+              data-name="titleBar"
+            >
+              <div
+                className="flex h-6 w-full shrink-0 items-start"
+                data-node-id={detailConfig.commentsTitleNodeId}
+                data-name="title"
+              >
+                <h2
+                  className="w-full text-base font-medium leading-6 text-text-primary"
+                  data-node-id={detailConfig.commentsTitleTextNodeId}
+                >
+                  共 {commentCount} 条评论
+                </h2>
+              </div>
+            </div>
+            <div
+              className="flex min-h-[74px] w-full shrink-0 items-start py-[17px]"
+              data-node-id={detailConfig.engageNodeId}
+              data-name="interactions engage-bar"
+            >
+              <div
+                className="h-10 w-10 shrink-0 overflow-hidden rounded-pill"
+                data-node-id={detailConfig.engageAvatarNodeId}
+                data-name="Avatar"
+              >
+                <AccountAvatar
+                  account={currentAccount}
+                  avatarSrc={profileAvatarSrc}
+                  size="xl"
+                />
+              </div>
+              <div
+                className="group ml-3 flex max-h-[110px] min-h-10 min-w-0 flex-1 items-start gap-4 rounded-lg bg-transparent py-1 pl-4 pr-1 shadow-border-strong transition-shadow hover:shadow-border-hover focus-within:!shadow-border-selected"
+                data-node-id={detailConfig.inputBoxNodeId}
+                data-name="input-box"
+              >
+                <div
+                  className="flex min-h-8 min-w-0 flex-1 items-start"
+                  data-node-id={detailConfig.inputTextareaNodeId}
+                  data-name="content-textarea"
+                >
+                  <textarea
+                    ref={commentTextareaRef}
+                    className="scrollbar-none min-h-[22px] min-w-0 flex-1 resize-none overflow-y-auto bg-transparent py-[5px] text-sm leading-[22px] text-text-primary outline-none placeholder:text-text-placeholder"
+                    data-node-id={detailConfig.inputTextNodeId}
+                    placeholder="聊聊你的想法"
+                    rows={1}
+                    value={commentDraft}
+                    onChange={(event) => setCommentDraft(event.target.value)}
+                  />
+                </div>
+                <div
+                  className="flex w-[60px] shrink-0 self-stretch flex-col items-center justify-center"
+                  data-node-id={detailConfig.inputRightNodeId}
+                  data-name="right-btn-area"
+                >
+                  <Button
+                    size="md"
+                    variant={hasCommentDraft ? 'primary' : 'text'}
+                    className="h-8 w-[60px] px-4"
+                    data-node-id={detailConfig.inputButtonNodeId}
+                    disabled={!hasCommentDraft}
+                    onClick={handleSubmitComment}
+                  >
+                    发送
+                  </Button>
+                </div>
+              </div>
+            </div>
+            {isCommentedDetail ? (
+              <AgentCommentList
+                comments={agentDetailData.comments}
+                onCommentLikeToggle={handleToggleCommentLike}
+                onReplySubmit={handleSubmitReply}
+              />
+            ) : (
+              <div
+                className="flex h-52 w-full shrink-0 flex-col items-start"
+                data-node-id={detailConfig.commentsContainerNodeId}
+                data-name="comments-container"
+              >
+                <div
+                  className="flex h-52 w-full shrink-0 flex-col items-center justify-center rounded-xl px-4 py-12"
+                  data-node-id="4737:22826"
+                  data-name="Content"
+                >
+                  <div
+                    className="flex h-28 w-80 shrink-0 flex-col items-center justify-center gap-4"
+                    data-node-id="4737:22827"
+                    data-name="Content"
+                  >
+                    <div
+                      className="h-20 w-20 shrink-0"
+                      data-node-id="4737:23146"
+                      data-name="Frame"
+                    >
+                      <img
+                        className="h-full w-full object-contain"
+                        src="/assets/agents/comments-empty.svg"
+                        alt=""
+                      />
+                    </div>
+                    <div
+                      className="flex h-4 w-full shrink-0 flex-col items-center"
+                      data-node-id="4737:22835"
+                      data-name="Text container"
+                    >
+                      <p
+                        className="w-full text-center text-xs leading-4 text-text-hint"
+                        data-node-id="4737:22836"
+                      >
+                        暂无评论，快发表你的意见吧～
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <p className="sr-only">{agent.title}</p>
+        </section>
+
+        <aside
+          className="flex h-[812px] w-[260px] shrink-0 flex-col items-start gap-6 pt-[84px]"
+          data-node-id={isCommentedDetail ? '4727:18855' : '4737:22635'}
+          data-name="right"
+        >
+          <div
+            className="flex h-10 w-full shrink-0 items-center gap-3"
+            data-node-id={isCommentedDetail ? '4727:18856' : '4737:22636'}
+            data-name="author-wrapper"
+          >
+            <div
+              className="flex h-10 min-w-0 flex-1 items-center gap-3"
+              data-node-id="4737:22637"
+              data-name="published-user"
+            >
+              <div
+                className="h-10 w-10 shrink-0 overflow-hidden rounded-pill"
+                data-node-id="4737:22638"
+                data-name="Avatar"
+              >
+                <img
+                  className="h-full w-full object-cover"
+                  src={detailConfig.authorAvatar}
+                  alt=""
+                />
+              </div>
+              <div
+                className="flex h-[38px] min-w-0 flex-1 flex-col items-start justify-center gap-0.5"
+                data-node-id="4737:22640"
+                data-name="user-info"
+              >
+                <div
+                  className="flex h-5 w-full shrink-0 items-center"
+                  data-node-id="4737:22641"
+                  data-name="Name"
+                >
+                  <p
+                    className="w-full truncate text-sm leading-5 text-text-primary"
+                    data-node-id="4737:22642"
+                  >
+                    HelloMe官方
+                  </p>
+                </div>
+                <div
+                  className="flex h-4 shrink-0 items-start gap-2 text-center text-xs leading-4 text-text-hint"
+                  data-node-id="4737:22643"
+                  data-name="user-count"
+                >
+                  <div className="flex shrink-0 gap-0.5" data-node-id="4737:22644" data-name="agents">
+                    <span data-node-id="4737:22645">智能体</span>
+                    <span data-node-id="4737:22646">16</span>
+                  </div>
+                  <div className="flex shrink-0 gap-0.5" data-node-id="4737:22647" data-name="fans">
+                    <span data-node-id="4737:22648">粉丝</span>
+                    <span data-node-id="4737:22649">12</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              className="flex h-6 w-12 shrink-0 items-center"
+              data-node-id="4737:22650"
+              data-name="user-follow-area"
+            >
+              <Button
+                size="xs"
+                className="h-6 w-12 rounded-lg bg-bg-black px-3 text-text-inverse hover:bg-bg-black/80 active:bg-bg-black"
+                data-node-id="4737:22651"
+              >
+                关注
+              </Button>
+            </div>
+          </div>
+
+          <div
+            className="flex h-4 w-full shrink-0 items-center"
+            data-node-id="4737:22652"
+            data-name="Menu Item"
+          >
+            <div className="h-px w-full bg-border-default" data-node-id="4737:22653" data-name="Divider" />
+          </div>
+
+          <div
+            className="flex h-9 w-full shrink-0 items-center justify-between text-center"
+            data-node-id="4737:22654"
+            data-name="data-info"
+          >
+            {detailStats.map((stat, index) => (
+              <Fragment key={stat.name}>
+                <div
+                  className="flex h-full shrink-0 flex-col items-center justify-center"
+                  data-node-id={stat.nodeIds[0]}
+                  data-name={stat.name}
+                >
+                  <p className="text-sm font-medium leading-5 text-text-primary" data-node-id={stat.nodeIds[1]}>{stat.value}</p>
+                  <p className="text-xs leading-4 text-text-hint" data-node-id={stat.nodeIds[2]}>{stat.label}</p>
+                </div>
+                {index < 3 && (
+                  <div
+                    className="flex h-full w-4 shrink-0 items-center"
+                    data-node-id={index === 0 ? '4737:22658' : index === 1 ? '4737:22663' : '4737:22668'}
+                    data-name="Vertical Divider"
+                  >
+                    <div
+                      className="mx-auto h-5 w-px bg-border-default"
+                      data-node-id={index === 0 ? '4737:22659' : index === 1 ? '4737:22664' : '4737:22669'}
+                      data-name="Divider"
+                    />
+                  </div>
+                )}
+              </Fragment>
+            ))}
+          </div>
+
+          <div
+            className="flex h-9 w-full shrink-0 items-center gap-2"
+            data-node-id="4737:22673"
+            data-name="Actions Wrapper"
+          >
             <Button
-              className="shrink-0 px-[18px]"
-              size="lg"
-              onClick={(event) => {
-                event.stopPropagation();
-              }}
+              className="h-9 w-32 shrink-0 rounded-lg px-[18px]"
+              icon="SquareMousePointer"
+              size="md"
+              data-node-id="4737:22674"
             >
               使用智能体
             </Button>
+            <IconButton
+              name="Heart"
+              size="lg"
+              variant="secondary"
+              surface="soft"
+              className={[
+                isAgentLiked ? '!text-accent-red' : undefined,
+                suppressedAgentActionHover === 'like'
+                  ? 'hover:!bg-transparent'
+                  : undefined,
+              ].filter(Boolean).join(' ')}
+              iconClassName={isAgentLiked ? 'fill-current' : undefined}
+              aria-label="点赞"
+              data-node-id="4737:22682"
+              onClick={handleToggleAgentLike}
+              onMouseLeave={() => setSuppressedAgentActionHover(null)}
+            />
+            <IconButton
+              name="Star"
+              size="lg"
+              variant="secondary"
+              surface="soft"
+              className={[
+                isAgentCollected ? '!text-accent-orange' : undefined,
+                suppressedAgentActionHover === 'collect'
+                  ? 'hover:!bg-transparent'
+                  : undefined,
+              ].filter(Boolean).join(' ')}
+              iconClassName={isAgentCollected ? 'fill-current' : undefined}
+              aria-label="收藏"
+              data-node-id="4737:22679"
+              onClick={handleToggleAgentCollect}
+              onMouseLeave={() => setSuppressedAgentActionHover(null)}
+            />
+            <IconButton
+              name="Share2"
+              size="lg"
+              variant="secondary"
+              surface="soft"
+              className={
+                suppressedAgentActionHover === 'share'
+                  ? 'hover:!bg-transparent'
+                  : undefined
+              }
+              aria-label="分享"
+              data-node-id="4737:22686"
+              onClick={handleShareAgent}
+              onMouseLeave={() => setSuppressedAgentActionHover(null)}
+            />
           </div>
-        </section>
 
-        <section className="flex w-full flex-col items-start justify-center px-12 pb-6 pt-4">
-          <p className="w-full text-justify text-sm leading-5 text-text-primary">
-            这是技能的详细介绍，文字自适应换行。这是技能的详细介绍，文字自适应换行。这是技能的详细介绍，文字自适应换行。这是技能的详细介绍，文字自适应换行。这是技能的详细介绍，文字自适应换行。这是技能的详细介绍，文字自适应换行。
-          </p>
-        </section>
+          <div
+            className="flex h-4 w-full shrink-0 items-center"
+            data-node-id="4737:22693"
+            data-name="Horizontal Divider"
+          >
+            <div className="h-px w-full bg-border-default" data-node-id="4737:22694" data-name="Divider" />
+          </div>
 
-        <section className="flex w-full flex-col items-start px-12 pt-6">
-          <div className="flex w-full flex-col items-start pb-4 shadow-border-bottom-subtle">
-            <h3 className="text-sm font-medium leading-5 text-text-primary">信息</h3>
-          </div>
-        </section>
+          <div
+            className="flex h-[464px] w-full shrink-0 flex-col items-start"
+            data-node-id="4737:22695"
+            data-name="Frame 2131333561"
+          >
+            <div
+              className="flex h-[72px] w-full shrink-0 flex-col items-start gap-3"
+              data-node-id="4737:22696"
+              data-name="updateTime"
+            >
+              <div className="flex h-5 w-full shrink-0 items-start" data-node-id="4737:22697" data-name="title">
+                <p className="w-full text-sm leading-5 text-text-primary" data-node-id="4737:22698">更新</p>
+              </div>
+              <div className="flex h-10 w-full shrink-0 flex-col items-start gap-2 text-xs leading-4" data-node-id="4737:22699" data-name="Content">
+                <div className="flex h-4 w-full shrink-0 items-start gap-4" data-node-id="4737:22700" data-name="List Item">
+                  <span className="w-[60px] shrink-0 text-text-hint" data-node-id="4737:22701">最近更新</span>
+                  <span className="min-w-0 flex-1 text-right text-text-primary" data-node-id="4737:22702">2026/08/20</span>
+                </div>
+                <div className="flex h-4 w-full shrink-0 items-start gap-4" data-node-id="4737:22703" data-name="List Item">
+                  <span className="w-[60px] shrink-0 text-text-hint" data-node-id="4737:22704">首次发布</span>
+                  <span className="min-w-0 flex-1 text-right text-text-primary" data-node-id="4737:22705">2026/08/20</span>
+                </div>
+              </div>
+            </div>
 
-        <section className="flex w-full flex-col items-start gap-2 px-12 py-4 text-left text-sm leading-5">
-          <div className="flex w-full items-center gap-2">
-            <span className="w-32 shrink-0 text-text-hint">开发者</span>
-            <span className="shrink-0 whitespace-nowrap text-text-primary">HelloMe</span>
+            <div className="mt-4 flex h-4 w-full shrink-0 items-center" data-node-id="4737:22706" data-name="Horizontal Divider">
+              <div className="h-px w-full bg-border-default" data-node-id="4737:22707" data-name="Divider" />
+            </div>
+
+            <div className="mt-4 flex h-24 w-full shrink-0 flex-col items-start gap-3" data-node-id="4737:22708" data-name="Version">
+              <div className="flex h-5 w-full shrink-0 items-center" data-node-id="4737:22709" data-name="Title">
+                <p className="w-full text-sm leading-5 text-text-primary" data-node-id="4737:22710">版本信息</p>
+              </div>
+              <div className="flex h-16 w-full shrink-0 flex-col items-start gap-2 text-xs leading-4" data-node-id="4737:22711" data-name="Content">
+                <div className="flex h-4 w-full shrink-0 items-center gap-4" data-node-id="4737:22712" data-name="List Item">
+                  <span className="w-[60px] shrink-0 text-left text-text-hint" data-node-id="4737:22713">开发者</span>
+                  <span className="min-w-0 flex-1 text-right text-text-primary" data-node-id="4737:22714">HelloMe</span>
+                </div>
+                <div className="flex h-4 w-full shrink-0 items-center gap-4" data-node-id="4737:22715" data-name="List Item">
+                  <span className="w-[60px] shrink-0 text-left text-text-hint" data-node-id="4737:22716">类别</span>
+                  <span className="min-w-0 flex-1 text-right text-text-primary" data-node-id="4737:22717">开发者工具</span>
+                </div>
+                <div className="flex h-4 w-full shrink-0 items-center gap-4" data-node-id="4737:22718" data-name="List Item">
+                  <span className="w-[60px] shrink-0 text-left text-text-hint" data-node-id="4737:22719">版本</span>
+                  <span className="min-w-0 flex-1 text-right text-text-primary" data-node-id="4737:22720">v1.0.2</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 flex h-4 w-full shrink-0 items-center" data-node-id="4737:22721" data-name="Horizontal Divider">
+              <div className="h-px w-full bg-border-default" data-node-id="4737:22722" data-name="Divider" />
+            </div>
+
+            <div className="mt-4 flex h-[200px] w-full shrink-0 flex-col items-start gap-3" data-node-id="4737:22723" data-name="license">
+              <div className="flex h-5 w-full shrink-0 items-center" data-node-id="4737:22724" data-name="Title">
+                <p className="w-full text-sm leading-5 text-text-primary" data-node-id="4737:22725">许可范围</p>
+              </div>
+              <div className="flex h-[168px] w-full shrink-0 flex-col items-start justify-center gap-3 text-xs leading-4" data-node-id="4737:22726" data-name="Content">
+                <div className="flex h-14 w-full shrink-0 flex-col items-start gap-1" data-node-id="4737:22727" data-name="List Item">
+                  <div className="flex h-4 w-full shrink-0 items-center" data-node-id="4737:22728" data-name="List Item">
+                    <p className="w-full text-left text-text-primary" data-node-id="4737:22729">商用</p>
+                  </div>
+                  <div className="flex h-4 w-full shrink-0 items-center gap-1.5" data-node-id="4737:22730" data-name="List Item">
+                    <Icon name="CircleCheck" size="sm" className="text-accent-green" data-node-id="4737:22731" />
+                    <p className="min-w-0 flex-1 text-left text-text-hint" data-node-id="4737:22734">生成内容可商用</p>
+                  </div>
+                  <div className="flex h-4 w-full shrink-0 items-center gap-1.5" data-node-id="4737:22735" data-name="List Item">
+                    <Icon name="CircleX" size="sm" className="text-accent-red" data-node-id="4737:22736" />
+                    <p className="min-w-0 flex-1 text-left text-text-hint" data-node-id="4737:22740">不可转售模型或出售融合模型</p>
+                  </div>
+                </div>
+                <div className="flex h-14 w-full shrink-0 flex-col items-start gap-1" data-node-id="4737:22741" data-name="List Item">
+                  <div className="flex h-4 w-full shrink-0 items-center" data-node-id="4737:22742" data-name="List Item">
+                    <p className="w-full text-left text-text-primary" data-node-id="4737:22743">创作</p>
+                  </div>
+                  <div className="flex h-4 w-full shrink-0 items-center gap-1.5" data-node-id="4737:22744" data-name="List Item">
+                    <Icon name="CircleCheck" size="sm" className="text-accent-green" data-node-id="4737:22745" />
+                    <p className="min-w-0 flex-1 text-left text-text-hint" data-node-id="4737:22748">可HelloMe在线生图</p>
+                  </div>
+                  <div className="flex h-4 w-full shrink-0 items-center gap-1.5" data-node-id="4737:22749" data-name="List Item">
+                    <Icon name="CircleCheck" size="sm" className="text-accent-green" data-node-id="4737:22750" />
+                    <p className="min-w-0 flex-1 text-left text-text-hint" data-node-id="4737:22753">可HelloMe在线生图可进行融合</p>
+                  </div>
+                </div>
+                <div className="flex h-8 w-full shrink-0 items-center" data-node-id="4737:22754" data-name="List Item">
+                  <p className="w-full text-left text-text-hint" data-node-id="4737:22755">
+                    *以上许可信息由创作者自行编辑，请遵守相关许可范围进行使用
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex w-full items-center gap-2">
-            <span className="w-32 shrink-0 text-text-hint">类别</span>
-            <span className="shrink-0 whitespace-nowrap text-text-primary">开发者工具</span>
-          </div>
-          <div className="flex w-full items-center gap-2">
-            <span className="w-32 shrink-0 text-text-hint">版本</span>
-            <span className="shrink-0 whitespace-nowrap text-text-primary">v1.0.2</span>
-          </div>
-        </section>
+        </aside>
       </div>
-    </ContentModal>
+    </div>
   );
 }
 
@@ -6322,9 +7923,15 @@ function EmptyMessageResult() {
 
 function CardContainer({
   cardsToShow,
+  currentAccount,
+  externalRefreshKey,
+  onAgentDataChange,
   onOpenAgentDetail,
 }: {
   cardsToShow: typeof cards;
+  currentAccount: MockAccount | null;
+  externalRefreshKey: number;
+  onAgentDataChange: () => void;
   onOpenAgentDetail: (agent: AgentCardData) => void;
 }) {
   if (cardsToShow.length === 0) {
@@ -6337,6 +7944,9 @@ function CardContainer({
         <AgentCard
           key={`${card.title}-${index}`}
           {...card}
+          currentAccount={currentAccount}
+          externalRefreshKey={externalRefreshKey}
+          onAgentDataChange={onAgentDataChange}
           onOpenDetail={() => onOpenAgentDetail(card)}
         />
       ))}
@@ -8157,6 +9767,7 @@ export function HomePage() {
     useState<ProjectDetailMode>(projectDetailModeTabs[0]);
   const [searchValue, setSearchValue] = useState('');
   const [isTitleMenuVisible, setIsTitleMenuVisible] = useState(false);
+  const [hasPageScrolled, setHasPageScrolled] = useState(false);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [isRechargeModalOpen, setIsRechargeModalOpen] = useState(false);
@@ -8165,8 +9776,6 @@ export function HomePage() {
   const [isCustomAgentModalOpen, setIsCustomAgentModalOpen] = useState(false);
   const [isAiWorkstationModalOpen, setIsAiWorkstationModalOpen] =
     useState(false);
-  const [selectedAgentDetail, setSelectedAgentDetail] =
-    useState<AgentCardData | null>(null);
   const [isMarkAllReadModalOpen, setIsMarkAllReadModalOpen] = useState(false);
   const [markAllReadTargetMode, setMarkAllReadTargetMode] =
     useState<MessageMode>('announcements');
@@ -8216,6 +9825,7 @@ export function HomePage() {
   );
   const [isNotificationPopoverOpen, setIsNotificationPopoverOpen] =
     useState(false);
+  const [agentDataRefreshKey, setAgentDataRefreshKey] = useState(0);
   const [expandedMessageIdsByTab, setExpandedMessageIdsByTab] = useState<
     Record<string, Set<string>>
   >(
@@ -8293,6 +9903,7 @@ export function HomePage() {
   const pendingContentReflowRef = useRef(false);
   const filterStuckRef = useRef(false);
   const titleMenuVisibleRef = useRef(false);
+  const pageScrolledRef = useRef(false);
   const mockDebugLogoClickCountRef = useRef(0);
   const mockDebugLogoClickTimerRef = useRef<number | null>(null);
   const messageAnimationFrameRef = useRef<number | null>(null);
@@ -8417,6 +10028,15 @@ export function HomePage() {
     projectItems.find((project) => project.id === renamingProjectId) ?? null;
   const deletingProject =
     projectItems.find((project) => project.id === deletingProjectId) ?? null;
+  const agentDetailId = getAgentDetailIdFromPath(currentPathname);
+  const currentAgentDetail =
+    agentDetailId !== null
+      ? cards.find((agent) => agent.id === agentDetailId) ?? null
+      : null;
+  const isAgentDetailPage =
+    activePage === 'home' &&
+    agentDetailId !== null &&
+    currentAgentDetail !== null;
   const projectDetailId = getProjectDetailIdFromPath(currentPathname);
   const currentProjectDetail =
     projectDetailId !== null
@@ -8473,7 +10093,7 @@ export function HomePage() {
     renamingProjectFileKey !== null ||
     deletingProjectFileKeys !== null;
   const stickyStartScrollTop =
-    isProjectDetailPage
+    isProjectDetailPage || isAgentDetailPage
       ? contentTitleHeight
       : activePage === 'home'
       ? heroSectionHeight + contentTitleHeight
@@ -8484,7 +10104,7 @@ export function HomePage() {
         : accountStickyStartScrollTop;
   const titleMenuVisibleScrollTop = Math.max(
     0,
-    isProjectDetailPage
+    isProjectDetailPage || isAgentDetailPage
       ? contentTitleHeight
       : getTitleMenuVisibleScrollTop(activePage),
   );
@@ -8683,10 +10303,10 @@ export function HomePage() {
       const nextPathname = window.location.pathname;
       const nextPage = getPageFromPath(nextPathname);
       const nextProjectDetailId = getProjectDetailIdFromPath(nextPathname);
+      const nextAgentDetailId = getAgentDetailIdFromPath(nextPathname);
 
       setCurrentPathname(nextPathname);
       setActivePage(nextPage);
-      setSearchValue('');
       setIsNotificationPopoverOpen(false);
       setIsTitleMenuVisible(false);
       filterStuckRef.current = false;
@@ -8698,9 +10318,12 @@ export function HomePage() {
       if (nextProjectDetailId !== null) {
         setProjectDetailMode(projectDetailModeTabs[0]);
         setActiveTab(projectDetailTabs[0]);
-      } else {
+      } else if (nextAgentDetailId === null) {
+        setSearchValue('');
         setProjectDetailMode(projectDetailModeTabs[0]);
         setActiveTab(getDefaultActiveTab(nextPage, viewMode));
+      } else {
+        setViewMode('agents');
       }
     }
 
@@ -8756,6 +10379,13 @@ export function HomePage() {
       if (titleMenuVisibleRef.current !== isTitleMenuVisibleNext) {
         titleMenuVisibleRef.current = isTitleMenuVisibleNext;
         setIsTitleMenuVisible(isTitleMenuVisibleNext);
+      }
+
+      const hasPageScrolledNext = scrollTop > 0;
+
+      if (pageScrolledRef.current !== hasPageScrolledNext) {
+        pageScrolledRef.current = hasPageScrolledNext;
+        setHasPageScrolled(hasPageScrolledNext);
       }
     },
     [stickyStartScrollTop, titleMenuVisibleScrollTop],
@@ -9063,6 +10693,32 @@ export function HomePage() {
     handlePageChange('projects');
   }
 
+  function handleOpenAgentDetail(agent: AgentCardData) {
+    const nextPath = getAgentDetailPath(agent.id);
+
+    if (window.location.pathname !== nextPath) {
+      window.history.pushState(null, '', nextPath);
+    }
+
+    setCurrentPathname(nextPath);
+    setActivePage('home');
+    setViewMode('agents');
+    setIsNotificationPopoverOpen(false);
+    setIsTitleMenuVisible(false);
+    filterStuckRef.current = false;
+    titleMenuVisibleRef.current = false;
+    window.scrollTo({ top: 0 });
+  }
+
+  function handleAgentDetailBack() {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    handlePageChange('home');
+  }
+
   function handleProjectDetailModeChange(nextMode: ProjectDetailMode) {
     prepareContentReflow();
     setProjectDetailMode(nextMode);
@@ -9260,8 +10916,10 @@ export function HomePage() {
 
   function handleMockDebugResetAccount() {
     const nextAccountData = resetMockAccountData(currentUser, seededAccountData);
+    resetMockAgentAccountState(nextAccountData.accounts.map((account) => account.id));
     setAccountData(nextAccountData);
     setSelectedAccountId(nextAccountData.accounts[0]?.id ?? null);
+    setAgentDataRefreshKey((currentKey) => currentKey + 1);
   }
 
   function handleMockDebugAiWorkstationConnectionStatusChange(
@@ -9421,8 +11079,10 @@ export function HomePage() {
           onNotificationMarkAllRead={handleNotificationMarkAllRead}
           onNotificationAllMessagesClick={handleNotificationAllMessagesClick}
           unreadMessageIds={visibleUnreadMessageIds}
-          showModeTabs={isTitleMenuVisible && !isProjectDetailPage}
-          showDivider={isTitleMenuVisible || isProjectDetailPage}
+          showModeTabs={
+            isTitleMenuVisible && !isProjectDetailPage && !isAgentDetailPage
+          }
+          showDivider={hasPageScrolled}
           sidebarCollapsed={isSidebarCollapsed}
           isLoggedIn={isLoggedIn}
           accountsToShow={accountData.accounts}
@@ -9439,6 +11099,8 @@ export function HomePage() {
           onLogoutClick={() => setIsLogoutConfirmModalOpen(true)}
           projectDetailTitle={isProjectDetailPage ? currentProjectDetail.title : null}
           onProjectDetailBack={handleProjectDetailBack}
+          agentDetailTitle={isAgentDetailPage ? currentAgentDetail.title : null}
+          onAgentDetailBack={handleAgentDetailBack}
           projectDetailMenuOpen={isProjectDetailPage && isProjectDetailMenuOpen}
           onProjectDetailMenuToggle={() =>
             setIsProjectDetailMenuOpen((currentValue) => !currentValue)
@@ -9465,7 +11127,15 @@ export function HomePage() {
           ref={mainRef}
           className="home-page-scroll relative bg-bg-soft pt-14"
         >
-          {isProjectDetailPage ? (
+          {isAgentDetailPage ? (
+            <AgentDetailPage
+              agent={currentAgentDetail}
+              currentAccount={currentAccount}
+              externalRefreshKey={agentDataRefreshKey}
+              profileAvatarSrc={profileAvatarSrc}
+              profileLabel={currentAccountDisplayName}
+            />
+          ) : isProjectDetailPage ? (
             <ProjectDetailView
               mode={projectDetailMode}
               onModeChange={handleProjectDetailModeChange}
@@ -9549,7 +11219,12 @@ export function HomePage() {
                   ) : viewMode === 'agents' ? (
                     <CardContainer
                       cardsToShow={filteredCards}
-                      onOpenAgentDetail={setSelectedAgentDetail}
+                      currentAccount={currentAccount}
+                      externalRefreshKey={agentDataRefreshKey}
+                      onAgentDataChange={() => {
+                        setAgentDataRefreshKey((currentKey) => currentKey + 1);
+                      }}
+                      onOpenAgentDetail={handleOpenAgentDetail}
                     />
                   ) : (
                     <WorkflowCardContainer workflowsToShow={filteredWorkflows} />
@@ -9595,12 +11270,6 @@ export function HomePage() {
           onPairComplete={handleAiWorkstationPairComplete}
           onOverviewClick={handleAiWorkstationOverviewClick}
           onClose={() => setIsAiWorkstationModalOpen(false)}
-        />
-      )}
-      {selectedAgentDetail && (
-        <AgentDetailModal
-          agent={selectedAgentDetail}
-          onClose={() => setSelectedAgentDetail(null)}
         />
       )}
       {isLoginModalOpen && (

@@ -141,6 +141,7 @@ const typographyItems = [
   { token: 'text-brand-sm', className: 'text-brand-sm', fontSize: '25px', lineHeight: '32px', sample: '品牌小标题 / Brand Label' },
   { token: 'text-xs', className: 'text-xs', fontSize: '12px', lineHeight: '16px', sample: '辅助信息 / Caption' },
   { token: 'text-sm', className: 'text-sm', fontSize: '14px', lineHeight: '20px', sample: '正文文本 / Body' },
+  { token: 'text-sm-reading', className: 'text-sm leading-[22px]', fontSize: '14px', lineHeight: '22px', sample: '特殊阅读输入 / Reading Exception' },
   { token: 'text-base', className: 'text-base', fontSize: '16px', lineHeight: '24px', sample: '强调正文 / Body Large' },
   { token: 'text-lg', className: 'text-lg', fontSize: '18px', lineHeight: '26px', sample: '小标题 / Section Title' },
   { token: 'text-xl', className: 'text-xl', fontSize: '20px', lineHeight: '28px', sample: '模块标题 / Module Title' },

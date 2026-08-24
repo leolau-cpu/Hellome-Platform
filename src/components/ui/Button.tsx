@@ -92,6 +92,7 @@ export function Button({
 type IconButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> & {
   name: IconName;
   iconSize?: IconSize;
+  iconClassName?: string;
   iconStrokeWidth?: number;
   variant?: ButtonVariant;
   size?: ButtonSize;
@@ -114,6 +115,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
     {
       name,
       iconSize,
+      iconClassName,
       iconStrokeWidth,
       variant = 'text',
       size = 'md',
@@ -149,6 +151,7 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         name={name}
         size={iconSize ?? iconSizeByButtonSize[size]}
         strokeWidth={iconStrokeWidth}
+        className={iconClassName}
       />
     </button>
   );
