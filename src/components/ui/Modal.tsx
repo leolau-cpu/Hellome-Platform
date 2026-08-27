@@ -48,6 +48,8 @@ type ConfirmModalProps = {
   confirmVariant?: ButtonVariant;
   closeLabel?: string;
   ariaLabel?: string;
+  bodyClassName?: string;
+  bodyPadding?: boolean;
   onClose: () => void;
   onConfirm: () => void;
 };
@@ -308,16 +310,22 @@ export function ConfirmModal({
   confirmVariant = 'primary',
   closeLabel,
   ariaLabel,
+  bodyClassName,
+  bodyPadding,
   onClose,
   onConfirm,
 }: ConfirmModalProps) {
+  const isSimpleDescription =
+    typeof description === 'string' || typeof description === 'number';
+
   return (
     <Modal
       size="md"
       title={title}
       closeLabel={closeLabel}
       ariaLabel={ariaLabel}
-      bodyClassName="flex items-center"
+      bodyPadding={bodyPadding}
+      bodyClassName={bodyClassName ?? 'flex items-center'}
       footer={({ close }) => (
         <div className="flex items-center justify-end gap-2">
           <Button variant="secondary" size="lg" onClick={close}>
@@ -337,7 +345,11 @@ export function ConfirmModal({
       )}
       onClose={onClose}
     >
-      <p className="text-sm leading-5 text-text-primary">{description}</p>
+      {isSimpleDescription ? (
+        <p className="text-sm leading-5 text-text-primary">{description}</p>
+      ) : (
+        description
+      )}
     </Modal>
   );
 }

@@ -22,6 +22,10 @@ export const router = createBrowserRouter([
         element: <HomePage />,
       },
       {
+        path: 'agents/:agentId',
+        element: <HomePage />,
+      },
+      {
         path: 'account',
         element: <HomePage />,
       },

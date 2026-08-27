@@ -138,7 +138,6 @@ const colorGroups = [
 const typographyItems = [
   { token: 'text-xxs', className: 'text-xxs', fontSize: '10px', lineHeight: '13px', sample: '极小状态标签 / Tiny Badge' },
   { token: 'text-label', className: 'text-label', fontSize: '11px', lineHeight: '14px', sample: '极小角标 / Micro Label' },
-  { token: 'text-brand-sm', className: 'text-brand-sm', fontSize: '25px', lineHeight: '32px', sample: '品牌小标题 / Brand Label' },
   { token: 'text-xs', className: 'text-xs', fontSize: '12px', lineHeight: '16px', sample: '辅助信息 / Caption' },
   { token: 'text-sm', className: 'text-sm', fontSize: '14px', lineHeight: '20px', sample: '正文文本 / Body' },
   { token: 'text-sm-reading', className: 'text-sm leading-[22px]', fontSize: '14px', lineHeight: '22px', sample: '特殊阅读输入 / Reading Exception' },

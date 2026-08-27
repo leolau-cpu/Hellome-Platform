@@ -2217,7 +2217,7 @@ function AiWorkstationConnectionModal({
               className="flex w-full shrink-0 flex-col items-start text-left text-accent-warningSoft"
               data-name="Title"
             >
-              <h2 className="w-full shrink-0 text-brand-sm font-extrabold uppercase leading-[30px]">
+              <h2 className="w-full shrink-0 text-2xl font-extrabold uppercase leading-[30px]">
                 HZ HERMES
               </h2>
               <p className="w-full shrink-0 text-xl font-semibold">
@@ -4115,6 +4115,7 @@ function TitleBar({
 	                event.stopPropagation();
 	                event.preventDefault();
 	                setIsTopAvatarPopoverOpen(false);
+                  onProjectDetailMenuClose?.();
 	                onNotificationToggle();
 	              }}
               onClick={(event) => {
@@ -4148,7 +4149,12 @@ function TitleBar({
             size="md"
             shape="pill"
             icon="PackagePlus"
-            onClick={onCustomAgentClick}
+            onClick={() => {
+              onProjectDetailMenuClose?.();
+              onNotificationClose();
+              setIsTopAvatarPopoverOpen(false);
+              onCustomAgentClick();
+            }}
           >
             定制智能体
           </Button>
@@ -4158,7 +4164,12 @@ function TitleBar({
             size="md"
             shape="pill"
             icon="Plus"
-            onClick={onRechargeClick}
+            onClick={() => {
+              onProjectDetailMenuClose?.();
+              onNotificationClose();
+              setIsTopAvatarPopoverOpen(false);
+              onRechargeClick();
+            }}
           >
             充值
           </Button>
@@ -4187,6 +4198,7 @@ function TitleBar({
 	                  event.stopPropagation();
 	                  event.preventDefault();
 	                  onNotificationClose();
+                    onProjectDetailMenuClose?.();
 	                  setIsTopAvatarPopoverOpen((currentValue) => !currentValue);
 	                }}
                 onClick={(event) => {
@@ -4234,7 +4246,11 @@ function TitleBar({
               className="h-8 whitespace-nowrap px-4"
               size="md"
               shape="pill"
-              onClick={onLoginClick}
+              onClick={() => {
+                onProjectDetailMenuClose?.();
+                onNotificationClose();
+                onLoginClick();
+              }}
             >
               <span>登录</span>
               <span className="-mx-0.5">／</span>
@@ -6466,6 +6482,16 @@ type AgentDetailStat = {
 
 type AgentCommentItem = MockAgentCommentItem;
 
+const commentReportReasons = [
+  '色情低俗',
+  '政治敏感',
+  '诈骗信息',
+  '种族歧视',
+  '违法违规',
+  '涉未成年人',
+  '网络暴力',
+];
+
 const hzCanvasCovers = [
   '/assets/home/agents/card-1.png',
   '/assets/home/agents/card-4.png',
@@ -6582,6 +6608,57 @@ const agentDetailConfigs: Record<AgentDetailVariant, {
   },
 };
 
+function ReportCommentModal({
+  selectedReasons,
+  onToggleReason,
+  onClose,
+  onConfirm,
+}: {
+  selectedReasons: string[];
+  onToggleReason: (reason: string) => void;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <ConfirmModal
+      title="举报评论"
+      cancelText="取消"
+      confirmText="提交"
+      closeLabel="关闭举报评论弹窗"
+      bodyPadding={false}
+      bodyClassName="flex w-full flex-col items-start px-4"
+      description={
+        <div
+          className="flex w-full shrink-0 flex-col items-start gap-1 py-2"
+          data-node-id="4761:16517"
+          data-name="Content"
+        >
+          {commentReportReasons.map((reason) => {
+            const selected = selectedReasons.includes(reason);
+
+            return (
+              <button
+                key={reason}
+                className="flex w-full shrink-0 items-center gap-2 rounded-button p-2 text-left transition-colors hover:bg-bg-soft active:bg-bg-medium"
+                data-name="card"
+                type="button"
+                onClick={() => onToggleReason(reason)}
+              >
+                <ProjectDetailCheckboxMark checked={selected} />
+                <span className="min-w-0 flex-1 truncate text-sm leading-5 text-text-primary">
+                  {reason}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      }
+      onClose={onClose}
+      onConfirm={onConfirm}
+    />
+  );
+}
+
 function AgentCommentRow({
   comment,
   onLikeClick,
@@ -6592,18 +6669,58 @@ function AgentCommentRow({
   onReplyClick: (commentId: string) => void;
 }) {
   const isIndented = Boolean(comment.indent);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [selectedReportReasons, setSelectedReportReasons] = useState<string[]>([]);
+  const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const menuPopoverRef = useRef<HTMLDivElement | null>(null);
   const avatarSizeClassName = isIndented ? 'h-6 w-6' : 'h-10 w-10';
   const rowHeightClassName = comment.heightClassName ?? (isIndented ? 'min-h-[76px]' : 'min-h-[92px]');
   const rightHeightClassName = comment.rightHeightClassName ?? 'min-h-[60px]';
   const contentHeightClassName = comment.contentHeightClassName ?? 'min-h-5';
   const topMarginClassName = isIndented ? 'ml-[52px]' : '';
 
+  useEffect(() => {
+    if (!isMenuOpen) {
+      return undefined;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target as Node | null;
+
+      if (
+        target &&
+        (menuButtonRef.current?.contains(target) ||
+          menuPopoverRef.current?.contains(target))
+      ) {
+        return;
+      }
+
+      setIsMenuOpen(false);
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown, true);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown, true);
+    };
+  }, [isMenuOpen]);
+
+  function toggleReportReason(reason: string) {
+    setSelectedReportReasons((currentReasons) =>
+      currentReasons.includes(reason)
+        ? currentReasons.filter((currentReason) => currentReason !== reason)
+        : [...currentReasons, reason],
+    );
+  }
+
   return (
-    <div
-      className={`flex ${rowHeightClassName} w-full min-w-0 shrink-0 items-start py-2`}
-      data-node-id={comment.nodeId}
-      data-name="comment-inner-container"
-    >
+    <>
+      <div
+        className={`flex ${rowHeightClassName} w-full min-w-0 shrink-0 items-start py-2`}
+        data-node-id={comment.nodeId}
+        data-name="comment-inner-container"
+      >
       <div
         className={[
           topMarginClassName,
@@ -6646,13 +6763,55 @@ function AgentCommentRow({
           >
             {comment.author}
           </p>
-          <button
-            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-text-hint transition-colors hover:bg-bg-hover hover:text-text-primary active:bg-bg-active"
-            data-name="Button"
-            type="button"
-          >
-            <Icon name="Ellipsis" size="sm" />
-          </button>
+          <div className="relative h-5 w-5 shrink-0">
+            <button
+              ref={menuButtonRef}
+              className={[
+                'flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-text-hint transition-colors active:bg-bg-strong',
+                isMenuOpen
+                  ? 'bg-bg-strong text-text-primary hover:bg-bg-strong'
+                  : 'hover:bg-bg-medium hover:text-text-primary',
+              ].filter(Boolean).join(' ')}
+              data-name="Button"
+              type="button"
+              aria-label="评论更多操作"
+              aria-expanded={isMenuOpen}
+              onPointerDown={(event) => {
+                event.stopPropagation();
+                event.preventDefault();
+                setIsMenuOpen((currentValue) => !currentValue);
+              }}
+              onClick={(event) => {
+                event.stopPropagation();
+                event.preventDefault();
+              }}
+            >
+              <Icon name="Ellipsis" size="sm" />
+            </button>
+            {isMenuOpen && (
+              <PopoverMenu
+                ref={menuPopoverRef}
+                width="sm"
+                align="right"
+                anchorRef={menuButtonRef}
+                aria-label="评论操作菜单"
+              >
+                <PopoverSection>
+                  <PopoverItem
+                    icon="CircleAlert"
+                    role="menuitem"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setIsMenuOpen(false);
+                      setIsReportModalOpen(true);
+                    }}
+                  >
+                    举报评论
+                  </PopoverItem>
+                </PopoverSection>
+              </PopoverMenu>
+            )}
+          </div>
         </div>
         <div
           className={`mt-1 flex ${contentHeightClassName} w-full shrink-0 items-start overflow-hidden`}
@@ -6708,7 +6867,19 @@ function AgentCommentRow({
           ))}
         </div>
       </div>
-    </div>
+      </div>
+      {isReportModalOpen && (
+        <ReportCommentModal
+          selectedReasons={selectedReportReasons}
+          onToggleReason={toggleReportReason}
+          onClose={() => setIsReportModalOpen(false)}
+          onConfirm={() => {
+            setSelectedReportReasons([]);
+            setIsReportModalOpen(false);
+          }}
+        />
+      )}
+    </>
   );
 }
 
@@ -6967,6 +7138,7 @@ function AgentDetailPage({
   const [isCoverSliding, setIsCoverSliding] = useState(false);
   const [isIntroExpanded, setIsIntroExpanded] = useState(false);
   const [canExpandIntro, setCanExpandIntro] = useState(false);
+  const [isAuthorFollowed, setIsAuthorFollowed] = useState(false);
   const [agentDetailRefreshKey, setAgentDetailRefreshKey] = useState(0);
   const [suppressedAgentActionHover, setSuppressedAgentActionHover] =
     useState<AgentActionHoverSuppression>(null);
@@ -7563,16 +7735,19 @@ function AgentDetailPage({
               </div>
             </div>
             <div
-              className="flex h-6 w-12 shrink-0 items-center"
+              className="flex h-6 shrink-0 items-center"
               data-node-id="4737:22650"
               data-name="user-follow-area"
             >
               <Button
                 size="xs"
-                className="h-6 w-12 rounded-lg bg-bg-black px-3 text-text-inverse hover:bg-bg-black/80 active:bg-bg-black"
+                variant={isAuthorFollowed ? 'secondary' : 'primary'}
+                surface="soft"
+                className="h-6 rounded-lg px-3"
                 data-node-id="4737:22651"
+                onClick={() => setIsAuthorFollowed((currentValue) => !currentValue)}
               >
-                关注
+                {isAuthorFollowed ? '已关注' : '关注'}
               </Button>
             </div>
           </div>

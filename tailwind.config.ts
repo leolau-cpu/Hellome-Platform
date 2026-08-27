@@ -90,7 +90,6 @@ export default {
       fontSize: {
         xxs: ['10px', '13px'],
         label: ['11px', '14px'],
-        'brand-sm': ['25px', '32px'],
         xs: ['12px', '16px'],
         sm: ['14px', '20px'],
         base: ['16px', '24px'],

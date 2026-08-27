@@ -6,7 +6,6 @@
 
 - 正文优先使用 `text-sm`，辅助信息优先使用 `text-xs`。
 - 极小状态标签在设计稿明确标注时使用 `text-xxs`，不要用任意字号。
-- 品牌展示小标题在设计稿明确标注时使用 `text-brand-sm`，不要替代常规页面标题。
 - 除品牌 Logo 文字外，字体族使用系统默认字体；Logo 文字使用 `Zen Dots Regular`。
 - 文本颜色使用 `text-text-primary`、`text-text-secondary`、`text-text-hint` 等 token。
 - 背景颜色使用 `bg-bg-white`、`bg-bg-soft`、`bg-bg-medium`、`bg-bg-strong` 等 token。
